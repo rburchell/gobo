@@ -44,7 +44,6 @@ func (this *Client) Run() {
         this.CommandChannel <- command
     }
 
-    return
 }
 
 
