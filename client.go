@@ -7,14 +7,24 @@ import "fmt"
 type Client struct {
     Conn net.Conn
     CommandChannel chan *Command
+    callbacks map[string][]CommandFunc
 }
+
+// An CommandFunc is a callback function to handle a received command from a
+// client.
+type CommandFunc func(client *Client, command *Command)()
 
 func NewClient(nick string) *Client {
     client := new(Client)
     mchan := make(chan *Command)
     client.CommandChannel = mchan
+    client.callbacks = make(map[string][]CommandFunc)
 
     return client
+}
+
+func (this *Client) AddCallback(command string, callback CommandFunc) {
+    this.callbacks[command] = append(this.callbacks[command], callback)
 }
 
 func (this *Client) Run() {
@@ -47,6 +57,12 @@ func (this *Client) Run() {
                 this.handlePing(command)
             default:
                 this.CommandChannel <- command
+        }
+
+        callbacks := this.callbacks[command.Command]
+
+        for _, callback := range callbacks {
+            callback(this, command)
         }
     }
 }
