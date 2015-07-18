@@ -34,7 +34,7 @@ func BenchmarkParseMultipleShort(b *testing.B) {
 
 func BenchmarkParseMultipleAndLong(b *testing.B) {
     for i := 0; i < b.N; i++ {
-        ParseLine(":w00t TEST hello world :hello world, how are you today")
+        ParseLine(":w00t TEST hello world :how are you today")
     }
 }
 
