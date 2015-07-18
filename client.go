@@ -25,9 +25,9 @@ func (this *Client) Run() {
     }
 
     this.Conn = conn
-    this.Conn.Write([]byte("NICK gobo\r\n"))
-    this.Conn.Write([]byte("USER gobo * * :General Purpose IRC Bot\r\n"))
-    this.Conn.Write([]byte("JOIN #coding\r\n"))
+    this.WriteLine("NICK gobo")
+    this.WriteLine("USER gobo * * :General Purpose IRC Bot")
+    this.WriteLine("JOIN #coding")
 
 
     bio := bufio.NewReader(conn)
@@ -43,6 +43,13 @@ func (this *Client) Run() {
         command := ParseLine(bufstring)
         this.CommandChannel <- command
     }
+}
+
+func (this *Client) WriteLine(bytes string) {
+    println("OUT: ", bytes)
+    this.Conn.Write([]byte(bytes))
+    this.Conn.Write([]byte("\r\n"))
+}
 
 }
 
