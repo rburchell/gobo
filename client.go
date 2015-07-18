@@ -41,7 +41,13 @@ func (this *Client) Run() {
         println("RUN: ", bufstring)
 
         command := ParseLine(bufstring)
-        this.CommandChannel <- command
+
+        switch command.Command {
+            case "PING":
+                this.handlePing(command)
+            default:
+                this.CommandChannel <- command
+        }
     }
 }
 
@@ -51,6 +57,8 @@ func (this *Client) WriteLine(bytes string) {
     this.Conn.Write([]byte("\r\n"))
 }
 
+func (this *Client) handlePing(c *Command) {
+    this.WriteLine(fmt.Sprintf("PONG :%s", c.Parameters[0]))
 }
 
 
