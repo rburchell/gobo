@@ -42,6 +42,11 @@ type Command struct {
 }
 
 func (this *Command) String() string {
+    // TODO: this should use a loop instead of strings.Join for parameters, making sure that
+    // there is nothing containing a space, and if there is, using a :.
+    //
+    // TODO: should append a : before the prefix (if one is set) and omit spaces
+    // if it is not.
     return fmt.Sprintf("%s %s %s", this.Prefix, this.Command, strings.Join(this.Parameters, " "))
 }
 
