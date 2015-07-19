@@ -21,26 +21,3 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package main
-
-import "fmt"
-
-func main() {
-    client := NewClient("gobo")
-
-    client.AddCallback("PRIVMSG", func (client *Client, command *Command) {
-        fmt.Printf("In PRIVMSG callback: %v\n", command)
-    })
-
-    go client.Run()
-
-    for {
-        select {
-        case command := <- client.CommandChannel:
-            fmt.Printf("MAIN: %v\n", command)
-            client.ProcessCallbacks()
-        }
-    }
-}
-
