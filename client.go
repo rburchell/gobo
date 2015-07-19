@@ -75,7 +75,7 @@ func (this *Client) Run() {
         }
 
         bufstring := string(buffer)
-        println("RUN: ", bufstring)
+        println("IN: ", bufstring)
 
         command := ParseLine(bufstring)
 

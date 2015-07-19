@@ -37,8 +37,7 @@ func main() {
 
     for {
         select {
-        case command := <- client.CommandChannel:
-            fmt.Printf("MAIN: %v\n", command)
+        case <- client.CommandChannel:
             client.ProcessCallbacks()
         }
     }
