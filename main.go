@@ -15,6 +15,7 @@ func main() {
         select {
         case command := <- client.CommandChannel:
             fmt.Printf("MAIN: %v\n", command)
+            client.ProcessCallbacks()
         }
     }
 }

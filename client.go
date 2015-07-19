@@ -3,11 +3,14 @@ package main
 import "bufio"
 import "net"
 import "fmt"
+import "sync"
 
 type Client struct {
     Conn net.Conn
     CommandChannel chan *Command
     callbacks map[string][]CommandFunc
+    pending_commands []*Command
+    pending_commands_mutex sync.Mutex
 }
 
 // An CommandFunc is a callback function to handle a received command from a
@@ -59,12 +62,25 @@ func (this *Client) Run() {
                 this.CommandChannel <- command
         }
 
-        callbacks := this.callbacks[command.Command]
+        this.pending_commands_mutex.Lock()
+        this.pending_commands = append(this.pending_commands, command)
+        this.pending_commands_mutex.Unlock()
+    }
+}
 
+func (this *Client) ProcessCallbacks() {
+    this.pending_commands_mutex.Lock();
+    pending_commands := this.pending_commands
+    this.pending_commands = nil
+    this.pending_commands_mutex.Unlock()
+
+    for _, command := range pending_commands {
+        callbacks := this.callbacks[command.Command]
         for _, callback := range callbacks {
             callback(this, command)
         }
     }
+
 }
 
 func (this *Client) WriteLine(bytes string) {
