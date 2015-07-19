@@ -42,21 +42,29 @@ type Command struct {
 }
 
 func (this *Command) String() string {
-    // TODO: this should use a loop instead of strings.Join for parameters, making sure that
-    // there is nothing containing a space, and if there is, using a :.
+    prefix := ""
+    parameters := ""
+
     if (len(this.Prefix) > 0) {
-        if (len(this.Parameters) > 0) {
-            return fmt.Sprintf(":%s %s %s", this.Prefix, this.Command, strings.Join(this.Parameters, " "))
+        prefix = fmt.Sprintf(":%s ", this.Prefix)
+    }
+
+    if (len(this.Parameters) > 0) {
+        pcount := len(this.Parameters)
+        if (strings.Contains(this.Parameters[pcount - 1], " ")) {
+            if (pcount > 1) {
+                parameters = strings.Join(this.Parameters[0:pcount - 1], " ")
+                parameters = fmt.Sprintf(" %s :%s", parameters, this.Parameters[pcount - 1])
+            } else {
+                parameters = " :" + this.Parameters[pcount - 1]
+            }
         } else {
-            return fmt.Sprintf(":%s %s", this.Prefix, this.Command)
-        }
-    } else {
-        if (len(this.Parameters) > 0) {
-            return fmt.Sprintf("%s %s", this.Command, strings.Join(this.Parameters, " "))
-        } else {
-            return this.Command
+            parameters  = " "
+            parameters += strings.Join(this.Parameters, " ")
         }
     }
+
+    return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
 }
 
 var (
