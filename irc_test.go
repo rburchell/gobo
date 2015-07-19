@@ -27,6 +27,74 @@ package main
 import "testing"
 import "reflect"
 
+func TestToString(t *testing.T) {
+    {
+        // with prefix, with no parameter
+        buf := ":w00t TEST"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    {
+        // with prefix, with short parameter
+        buf := ":w00t TEST hello"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    {
+        // with prefix, with short parameters
+        buf := ":w00t TEST hello world"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    { // XFAIL
+        // with prefix, with long parameter
+        buf := ":w00t TEST :foo bar"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+
+    {
+        // without prefix, with no parameter
+        buf := "TEST"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    {
+        // without prefix, with short parameter
+        buf := "TEST hello"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    {
+        // without prefix, with short parameters
+        buf := "TEST hello world"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    { // XFAIL
+        // without prefix, with long parameter
+        buf := "TEST :foo bar"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+}
+
 func TestParseSingleLong(t *testing.T) {
     c := ParseLine(":w00t TEST :hello world")
 
