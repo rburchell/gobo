@@ -60,6 +60,14 @@ func TestToString(t *testing.T) {
             t.Error("Expected " + buf + " got ", c.String())
         }
     }
+    { // XFAIL
+        // with prefix, with multiple and long parameter
+        buf := ":w00t TEST hello world :foo bar"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
 
     {
         // without prefix, with no parameter
@@ -88,6 +96,14 @@ func TestToString(t *testing.T) {
     { // XFAIL
         // without prefix, with long parameter
         buf := "TEST :foo bar"
+        c := ParseLine(buf)
+        if (c.String() != buf) {
+            t.Error("Expected " + buf + " got ", c.String())
+        }
+    }
+    { // XFAIL
+        // without prefix, with multiple and long parameter
+        buf := "TEST hello world :foo bar"
         c := ParseLine(buf)
         if (c.String() != buf) {
             t.Error("Expected " + buf + " got ", c.String())
