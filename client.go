@@ -58,7 +58,7 @@ func (this *Client) Run() {
     conn, err := net.Dial("tcp", "irc.chatspike.net:6667")
 
     if (err != nil) {
-        panic(fmt.Sprintf("Couldn't connect to server", err))
+        panic(fmt.Sprintf("Couldn't connect to server: %s", err))
     }
 
     this.Conn = conn
