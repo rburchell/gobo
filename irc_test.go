@@ -27,30 +27,6 @@ package main
 import "testing"
 import "reflect"
 
-func TestToString(t *testing.T) {
-    tests := []string{
-        ":w00t TEST", // with prefix, with no parameter
-        ":w00t TEST hello", // with prefix, with short parameter
-        ":w00t TEST hello world", // with prefix, with short parameters
-        ":w00t TEST :foo bar", // with prefix, with long parameter
-        ":w00t TEST hello world :foo bar", // with prefix, with multiple and long parameter
-
-        "TEST", // without prefix, with no parameter
-        "TEST hello", // without prefix, with short parameter
-        "TEST hello world", // without prefix, with short parameters
-        "TEST :foo bar", // without prefix, with long parameter
-        "TEST hello world :foo bar", // without prefix, with multiple and long parameter
-    }
-
-    for _, test := range tests {
-        // without prefix, with multiple and long parameter
-        c := ParseLine(test)
-        if (c.String() != test) {
-            t.Error("Expected " + test + " got ", c.String())
-        }
-    }
-}
-
 type ParserTest struct {
     Input string
     Prefix string
@@ -60,28 +36,66 @@ type ParserTest struct {
 
 func TestParse(t *testing.T) {
     tests := []ParserTest{
-        // single long
         {
-            ":w00t TEST :hello world",
+            ":w00t TEST",
             "w00t",
             "TEST",
-            []string{ "hello world", },
+            []string{},
         },
-
-        // multiple short
+        {
+            ":w00t TEST hello",
+            "w00t",
+            "TEST",
+            []string{ "hello" },
+        },
         {
             ":w00t TEST hello world",
             "w00t",
             "TEST",
-            []string{ "hello", "world", },
+            []string{ "hello", "world" },
         },
-
-        // multiple short and long
+        {
+            ":w00t TEST :hello world",
+            "w00t",
+            "TEST",
+            []string{ "hello world" },
+        },
         {
             ":w00t TEST hello world :how are you today",
             "w00t",
             "TEST",
-            []string{ "hello", "world", "how are you today", },
+            []string{ "hello", "world", "how are you today" },
+        },
+
+        {
+            "TEST",
+            "",
+            "TEST",
+            []string{},
+        },
+        {
+            "TEST hello",
+            "",
+            "TEST",
+            []string{ "hello" },
+        },
+        {
+            "TEST hello world",
+            "",
+            "TEST",
+            []string{ "hello", "world" },
+        },
+        {
+            "TEST :hello world",
+            "",
+            "TEST",
+            []string{ "hello world" },
+        },
+        {
+            "TEST hello world :how are you today",
+            "",
+            "TEST",
+            []string{ "hello", "world", "how are you today" },
         },
     }
 
@@ -97,6 +111,11 @@ func TestParse(t *testing.T) {
 
         if (!reflect.DeepEqual(c.Parameters, test.Parameters)) {
             t.Errorf("Expected: %#v, got %#v", test.Parameters, c.Parameters)
+        }
+
+        // also test that converting back to string works
+        if c.String() != test.Input {
+            t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
         }
     }
 }
