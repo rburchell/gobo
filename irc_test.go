@@ -100,6 +100,8 @@ func TestParse(t *testing.T) {
     }
 
     for _, test := range tests {
+        t.Logf("Testing: %s", test.Input)
+
         c := ParseLine(test.Input)
         if (c.Prefix != test.Prefix) {
             t.Errorf("Expected: %#v, got %#v", test.Prefix, c.Prefix)
