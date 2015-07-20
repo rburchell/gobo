@@ -51,51 +51,53 @@ func TestToString(t *testing.T) {
     }
 }
 
-func TestParseSingleLong(t *testing.T) {
-    c := ParseLine(":w00t TEST :hello world")
-
-    if (c.Prefix != "w00t") {
-        t.Error("Expected w00t, got ", c.Prefix)
-    }
-
-    if (c.Command != "TEST") {
-        t.Error("Expected TEST, got ", c.Command)
-    }
-
-    if (!reflect.DeepEqual(c.Parameters, []string{"hello world"})) {
-        t.Error("Expected [hello world], got ", c.Parameters)
-    }
+type ParserTest struct {
+    Input string
+    Prefix string
+    Command string
+    Parameters []string
 }
 
-func TestParseMultipleShort(t *testing.T) {
-    c := ParseLine(":w00t TEST hello world")
+func TestParse(t *testing.T) {
+    tests := []ParserTest{
+        // single long
+        {
+            ":w00t TEST :hello world",
+            "w00t",
+            "TEST",
+            []string{ "hello world", },
+        },
 
-    if (c.Prefix != "w00t") {
-        t.Error("Expected w00t, got ", c.Prefix)
+        // multiple short
+        {
+            ":w00t TEST hello world",
+            "w00t",
+            "TEST",
+            []string{ "hello", "world", },
+        },
+
+        // multiple short and long
+        {
+            ":w00t TEST hello world :how are you today",
+            "w00t",
+            "TEST",
+            []string{ "hello", "world", "how are you today", },
+        },
     }
 
-    if (c.Command != "TEST") {
-        t.Error("Expected TEST, got ", c.Command)
-    }
+    for _, test := range tests {
+        c := ParseLine(test.Input)
+        if (c.Prefix != test.Prefix) {
+            t.Errorf("Expected: %#v, got %#v", test.Prefix, c.Prefix)
+        }
 
-    if (!reflect.DeepEqual(c.Parameters, []string{"hello", "world"})) {
-        t.Error("Expected [hello world], got ", c.Parameters)
-    }
-}
+        if (c.Command != test.Command) {
+            t.Errorf("Expected: %#v, got %#v", test.Command, c.Command)
+        }
 
-func TestParseMultipleAndLong(t *testing.T) {
-    c := ParseLine(":w00t TEST hello world :how are you today")
-
-    if (c.Prefix != "w00t") {
-        t.Error("Expected w00t, got ", c.Prefix)
-    }
-
-    if (c.Command != "TEST") {
-        t.Error("Expected TEST, got ", c.Command)
-    }
-
-    if (!reflect.DeepEqual(c.Parameters, []string{"hello", "world", "how are you today"})) {
-        t.Error("Expected [hello world], got ", c.Parameters)
+        if (!reflect.DeepEqual(c.Parameters, test.Parameters)) {
+            t.Errorf("Expected: %#v, got %#v", test.Parameters, c.Parameters)
+        }
     }
 }
 
