@@ -122,6 +122,13 @@ func TestParse(t *testing.T) {
     }
 }
 
+func BenchmarkString(b *testing.B) {
+    c := ParseLine(":w00t TEST :hello world")
+    for i := 0; i < b.N; i++ {
+        c.String()
+    }
+}
+
 func BenchmarkParseSingleLong(b *testing.B) {
     for i := 0; i < b.N; i++ {
         ParseLine(":w00t TEST :hello world")
