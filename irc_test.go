@@ -28,85 +28,25 @@ import "testing"
 import "reflect"
 
 func TestToString(t *testing.T) {
-    {
-        // with prefix, with no parameter
-        buf := ":w00t TEST"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // with prefix, with short parameter
-        buf := ":w00t TEST hello"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // with prefix, with short parameters
-        buf := ":w00t TEST hello world"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // with prefix, with long parameter
-        buf := ":w00t TEST :foo bar"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // with prefix, with multiple and long parameter
-        buf := ":w00t TEST hello world :foo bar"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
+    tests := []string{
+        ":w00t TEST", // with prefix, with no parameter
+        ":w00t TEST hello", // with prefix, with short parameter
+        ":w00t TEST hello world", // with prefix, with short parameters
+        ":w00t TEST :foo bar", // with prefix, with long parameter
+        ":w00t TEST hello world :foo bar", // with prefix, with multiple and long parameter
+
+        "TEST", // without prefix, with no parameter
+        "TEST hello", // without prefix, with short parameter
+        "TEST hello world", // without prefix, with short parameters
+        "TEST :foo bar", // without prefix, with long parameter
+        "TEST hello world :foo bar", // without prefix, with multiple and long parameter
     }
 
-    {
-        // without prefix, with no parameter
-        buf := "TEST"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // without prefix, with short parameter
-        buf := "TEST hello"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // without prefix, with short parameters
-        buf := "TEST hello world"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
-        // without prefix, with long parameter
-        buf := "TEST :foo bar"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
-        }
-    }
-    {
+    for _, test := range tests {
         // without prefix, with multiple and long parameter
-        buf := "TEST hello world :foo bar"
-        c := ParseLine(buf)
-        if (c.String() != buf) {
-            t.Error("Expected " + buf + " got ", c.String())
+        c := ParseLine(test)
+        if (c.String() != test) {
+            t.Error("Expected " + test + " got ", c.String())
         }
     }
 }
