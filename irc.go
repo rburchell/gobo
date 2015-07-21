@@ -30,77 +30,76 @@ import "regexp"
 
 // :cameron.freenode.net NOTICE * :*** Looking up your hostname...
 type Command struct {
-    // cameron.freenode.net
-    Prefix string
+	// cameron.freenode.net
+	Prefix string
 
-    // NOTICE
-    Command string
+	// NOTICE
+	Command string
 
-    // [0]: *
-    // [1]: *** Looking up your hostname...
-    Parameters []string
+	// [0]: *
+	// [1]: *** Looking up your hostname...
+	Parameters []string
 }
 
 func (this *Command) String() string {
-    prefix := ""
-    parameters := ""
+	prefix := ""
+	parameters := ""
 
-    if (len(this.Prefix) > 0) {
-        prefix = fmt.Sprintf(":%s ", this.Prefix)
-    }
+	if len(this.Prefix) > 0 {
+		prefix = fmt.Sprintf(":%s ", this.Prefix)
+	}
 
-    if (len(this.Parameters) > 0) {
-        pcount := len(this.Parameters)
-        if (strings.Contains(this.Parameters[pcount - 1], " ")) {
-            if (pcount > 1) {
-                parameters = strings.Join(this.Parameters[0:pcount - 1], " ")
-                parameters = fmt.Sprintf(" %s :%s", parameters, this.Parameters[pcount - 1])
-            } else {
-                parameters = " :" + this.Parameters[pcount - 1]
-            }
-        } else {
-            parameters  = " "
-            parameters += strings.Join(this.Parameters, " ")
-        }
-    }
+	if len(this.Parameters) > 0 {
+		pcount := len(this.Parameters)
+		if strings.Contains(this.Parameters[pcount-1], " ") {
+			if pcount > 1 {
+				parameters = strings.Join(this.Parameters[0:pcount-1], " ")
+				parameters = fmt.Sprintf(" %s :%s", parameters, this.Parameters[pcount-1])
+			} else {
+				parameters = " :" + this.Parameters[pcount-1]
+			}
+		} else {
+			parameters = " "
+			parameters += strings.Join(this.Parameters, " ")
+		}
+	}
 
-    return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
+	return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
 }
 
 var (
-    spacesExpr = regexp.MustCompile(` +`)
+	spacesExpr = regexp.MustCompile(` +`)
 )
 
 func splitArg(line string) (arg string, rest string) {
-    parts := spacesExpr.Split(line, 2)
-    if len(parts) > 0 {
-        arg = parts[0]
-    }
-    if len(parts) > 1 {
-        rest = parts[1]
-    }
-    return
+	parts := spacesExpr.Split(line, 2)
+	if len(parts) > 0 {
+		arg = parts[0]
+	}
+	if len(parts) > 1 {
+		rest = parts[1]
+	}
+	return
 }
 
 func ParseLine(line string) *Command {
-    args := make([]string, 0)
-    command := new(Command)
+	args := make([]string, 0)
+	command := new(Command)
 
-    if strings.HasPrefix(line, ":") {
-        command.Prefix, line = splitArg(line)
-        command.Prefix = command.Prefix[1:len(command.Prefix)]
-    }
-    arg, line := splitArg(line)
-    command.Command = strings.ToUpper(arg)
-    for len(line) > 0 {
-        if strings.HasPrefix(line, ":") {
-            args = append(args, line[len(":"):])
-            break
-        }
-        arg, line = splitArg(line)
-        args = append(args, arg)
-    }
-    command.Parameters = args
-    return command
+	if strings.HasPrefix(line, ":") {
+		command.Prefix, line = splitArg(line)
+		command.Prefix = command.Prefix[1:len(command.Prefix)]
+	}
+	arg, line := splitArg(line)
+	command.Command = strings.ToUpper(arg)
+	for len(line) > 0 {
+		if strings.HasPrefix(line, ":") {
+			args = append(args, line[len(":"):])
+			break
+		}
+		arg, line = splitArg(line)
+		args = append(args, arg)
+	}
+	command.Parameters = args
+	return command
 }
-

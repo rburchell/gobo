@@ -27,19 +27,18 @@ package main
 import "fmt"
 
 func main() {
-    client := NewClient("gobo")
+	client := NewClient("gobo")
 
-    client.AddCallback("PRIVMSG", func (client *Client, command *Command) {
-        fmt.Printf("In PRIVMSG callback: %v\n", command)
-    })
+	client.AddCallback("PRIVMSG", func(client *Client, command *Command) {
+		fmt.Printf("In PRIVMSG callback: %v\n", command)
+	})
 
-    go client.Run()
+	go client.Run()
 
-    for {
-        select {
-        case <- client.CommandChannel:
-            client.ProcessCallbacks()
-        }
-    }
+	for {
+		select {
+		case <-client.CommandChannel:
+			client.ProcessCallbacks()
+		}
+	}
 }
-

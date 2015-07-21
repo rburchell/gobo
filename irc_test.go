@@ -28,124 +28,121 @@ import "testing"
 import "reflect"
 
 type ParserTest struct {
-    Input string
-    Prefix string
-    Command string
-    Parameters []string
+	Input      string
+	Prefix     string
+	Command    string
+	Parameters []string
 }
 
 func TestParse(t *testing.T) {
-    tests := []ParserTest{
-        {
-            ":w00t TEST",
-            "w00t",
-            "TEST",
-            []string{},
-        },
-        {
-            ":w00t TEST hello",
-            "w00t",
-            "TEST",
-            []string{ "hello" },
-        },
-        {
-            ":w00t TEST hello world",
-            "w00t",
-            "TEST",
-            []string{ "hello", "world" },
-        },
-        {
-            ":w00t TEST :hello world",
-            "w00t",
-            "TEST",
-            []string{ "hello world" },
-        },
-        {
-            ":w00t TEST hello world :how are you today",
-            "w00t",
-            "TEST",
-            []string{ "hello", "world", "how are you today" },
-        },
+	tests := []ParserTest{
+		{
+			":w00t TEST",
+			"w00t",
+			"TEST",
+			[]string{},
+		},
+		{
+			":w00t TEST hello",
+			"w00t",
+			"TEST",
+			[]string{"hello"},
+		},
+		{
+			":w00t TEST hello world",
+			"w00t",
+			"TEST",
+			[]string{"hello", "world"},
+		},
+		{
+			":w00t TEST :hello world",
+			"w00t",
+			"TEST",
+			[]string{"hello world"},
+		},
+		{
+			":w00t TEST hello world :how are you today",
+			"w00t",
+			"TEST",
+			[]string{"hello", "world", "how are you today"},
+		},
 
-        {
-            "TEST",
-            "",
-            "TEST",
-            []string{},
-        },
-        {
-            "TEST hello",
-            "",
-            "TEST",
-            []string{ "hello" },
-        },
-        {
-            "TEST hello world",
-            "",
-            "TEST",
-            []string{ "hello", "world" },
-        },
-        {
-            "TEST :hello world",
-            "",
-            "TEST",
-            []string{ "hello world" },
-        },
-        {
-            "TEST hello world :how are you today",
-            "",
-            "TEST",
-            []string{ "hello", "world", "how are you today" },
-        },
-    }
+		{
+			"TEST",
+			"",
+			"TEST",
+			[]string{},
+		},
+		{
+			"TEST hello",
+			"",
+			"TEST",
+			[]string{"hello"},
+		},
+		{
+			"TEST hello world",
+			"",
+			"TEST",
+			[]string{"hello", "world"},
+		},
+		{
+			"TEST :hello world",
+			"",
+			"TEST",
+			[]string{"hello world"},
+		},
+		{
+			"TEST hello world :how are you today",
+			"",
+			"TEST",
+			[]string{"hello", "world", "how are you today"},
+		},
+	}
 
-    for _, test := range tests {
-        t.Logf("Testing: %s", test.Input)
+	for _, test := range tests {
+		t.Logf("Testing: %s", test.Input)
 
-        c := ParseLine(test.Input)
-        if (c.Prefix != test.Prefix) {
-            t.Errorf("Expected: %#v, got %#v", test.Prefix, c.Prefix)
-        }
+		c := ParseLine(test.Input)
+		if c.Prefix != test.Prefix {
+			t.Errorf("Expected: %#v, got %#v", test.Prefix, c.Prefix)
+		}
 
-        if (c.Command != test.Command) {
-            t.Errorf("Expected: %#v, got %#v", test.Command, c.Command)
-        }
+		if c.Command != test.Command {
+			t.Errorf("Expected: %#v, got %#v", test.Command, c.Command)
+		}
 
-        if (!reflect.DeepEqual(c.Parameters, test.Parameters)) {
-            t.Errorf("Expected: %#v, got %#v", test.Parameters, c.Parameters)
-        }
+		if !reflect.DeepEqual(c.Parameters, test.Parameters) {
+			t.Errorf("Expected: %#v, got %#v", test.Parameters, c.Parameters)
+		}
 
-        // also test that converting back to string works
-        if c.String() != test.Input {
-            t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
-        }
-    }
+		// also test that converting back to string works
+		if c.String() != test.Input {
+			t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
+		}
+	}
 }
 
 func BenchmarkString(b *testing.B) {
-    c := ParseLine(":w00t TEST :hello world")
-    for i := 0; i < b.N; i++ {
-        c.String()
-    }
+	c := ParseLine(":w00t TEST :hello world")
+	for i := 0; i < b.N; i++ {
+		c.String()
+	}
 }
 
 func BenchmarkParseSingleLong(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        ParseLine(":w00t TEST :hello world")
-    }
+	for i := 0; i < b.N; i++ {
+		ParseLine(":w00t TEST :hello world")
+	}
 }
 
 func BenchmarkParseMultipleShort(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        ParseLine(":w00t TEST hello world")
-    }
+	for i := 0; i < b.N; i++ {
+		ParseLine(":w00t TEST hello world")
+	}
 }
-
 
 func BenchmarkParseMultipleAndLong(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        ParseLine(":w00t TEST hello world :how are you today")
-    }
+	for i := 0; i < b.N; i++ {
+		ParseLine(":w00t TEST hello world :how are you today")
+	}
 }
-
-
