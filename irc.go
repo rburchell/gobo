@@ -26,7 +26,6 @@ package main
 
 import "fmt"
 import "strings"
-import "regexp"
 
 // :cameron.freenode.net NOTICE * :*** Looking up your hostname...
 type Command struct {
@@ -67,12 +66,8 @@ func (this *Command) String() string {
 	return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
 }
 
-var (
-	spacesExpr = regexp.MustCompile(` +`)
-)
-
 func splitArg(line string) (arg string, rest string) {
-	parts := spacesExpr.Split(line, 2)
+	parts := strings.SplitN(line, " ", 2)
 	if len(parts) > 0 {
 		arg = parts[0]
 	}
