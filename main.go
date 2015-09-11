@@ -37,8 +37,8 @@ func main() {
 
 	for {
 		select {
-		case <-client.CommandChannel:
-			client.ProcessCallbacks()
+		case command := <-client.CommandChannel:
+			client.ProcessCallbacks(command)
 		}
 	}
 }

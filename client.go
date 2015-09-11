@@ -30,11 +30,10 @@ import "fmt"
 import "sync"
 
 type Client struct {
-	Conn                   net.Conn
-	CommandChannel         chan *Command
-	callbacks              map[string][]CommandFunc
-	pending_commands       []*Command
-	pending_commands_mutex sync.Mutex
+	Conn            net.Conn
+	CommandChannel  chan *Command
+	callbacks       map[string][]CommandFunc
+	callbacks_mutex sync.Mutex
 }
 
 // An CommandFunc is a callback function to handle a received command from a
@@ -51,7 +50,9 @@ func NewClient(nick string) *Client {
 }
 
 func (this *Client) AddCallback(command string, callback CommandFunc) {
+	this.callbacks_mutex.Lock()
 	this.callbacks[command] = append(this.callbacks[command], callback)
+	this.callbacks_mutex.Unlock()
 }
 
 func (this *Client) Run() {
@@ -84,26 +85,16 @@ func (this *Client) Run() {
 		default:
 			this.CommandChannel <- command
 		}
-
-		this.pending_commands_mutex.Lock()
-		this.pending_commands = append(this.pending_commands, command)
-		this.pending_commands_mutex.Unlock()
 	}
 }
 
-func (this *Client) ProcessCallbacks() {
-	this.pending_commands_mutex.Lock()
-	pending_commands := this.pending_commands
-	this.pending_commands = nil
-	this.pending_commands_mutex.Unlock()
-
-	for _, command := range pending_commands {
-		callbacks := this.callbacks[command.Command]
-		for _, callback := range callbacks {
-			callback(this, command)
-		}
+func (this *Client) ProcessCallbacks(c *Command) {
+	this.callbacks_mutex.Lock()
+	callbacks := this.callbacks[c.Command]
+	this.callbacks_mutex.Unlock()
+	for _, callback := range callbacks {
+		callback(this, c)
 	}
-
 }
 
 func (this *Client) WriteLine(bytes string) {
