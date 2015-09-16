@@ -28,10 +28,32 @@ import "fmt"
 import "strings"
 import "regexp"
 
+type IrcPrefix struct {
+	Server string
+	Nick   string
+	User   string
+	Host   string
+}
+
+func (this *IrcPrefix) String() string {
+	if len(this.Server) > 0 {
+		return this.Server
+	} else {
+		// we have two possible forms that are valid:
+		// nick
+		// nick!user@host
+		if len(this.User) > 0 {
+			return fmt.Sprintf("%s!%s@%s", this.Nick, this.User, this.Host)
+		} else {
+			return this.Nick
+		}
+	}
+}
+
 // :cameron.freenode.net NOTICE * :*** Looking up your hostname...
 type Command struct {
 	// cameron.freenode.net
-	Prefix string
+	Prefix IrcPrefix
 
 	// NOTICE
 	Command string
@@ -45,8 +67,8 @@ func (this *Command) String() string {
 	prefix := ""
 	parameters := ""
 
-	if len(this.Prefix) > 0 {
-		prefix = fmt.Sprintf(":%s ", this.Prefix)
+	if len(this.Prefix.String()) > 0 {
+		prefix = fmt.Sprintf(":%s ", this.Prefix.String())
 	}
 
 	if len(this.Parameters) > 0 {
@@ -87,8 +109,33 @@ func ParseLine(line string) *Command {
 	command := new(Command)
 
 	if strings.HasPrefix(line, ":") {
-		command.Prefix, line = splitArg(line)
-		command.Prefix = command.Prefix[1:len(command.Prefix)]
+		var pfx string
+		pfx, line = splitArg(line)
+		pfx = pfx[1:len(pfx)]
+
+		// foo!bar@moo is nick!user@host
+		// foo is nick
+		// foo.bar.moo is a server
+		//
+		// therefore: if we see a ! OR we see no ., we enter this branch...
+		if strings.Contains(pfx, "!") || !strings.Contains(pfx, ".") {
+			var bang int = strings.Index(pfx, "!")
+			var at int = strings.Index(pfx, "@") //  TODO: would LastIndex be faster? maybe not, host is usually long.
+			if bang == -1 && at == -1 {
+				command.Prefix.Nick = pfx
+			} else if bang == -1 {
+				// nick@host? invalid case, we empty the prefix
+			} else if at == -1 {
+				// nick!user? invalid case, we empty the prefix
+			} else {
+				command.Prefix.Nick = pfx[0:bang]
+				command.Prefix.User = pfx[bang+1 : at]
+				command.Prefix.Host = pfx[at+1 : len(pfx)]
+			}
+		} else {
+			// message from a server
+			command.Prefix.Server = pfx
+		}
 	}
 	arg, line := splitArg(line)
 	command.Command = strings.ToUpper(arg)

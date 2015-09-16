@@ -29,7 +29,7 @@ import "reflect"
 
 type ParserTest struct {
 	Input      string
-	Prefix     string
+	Prefix     IrcPrefix
 	Command    string
 	Parameters []string
 }
@@ -38,62 +38,62 @@ func TestParse(t *testing.T) {
 	tests := []ParserTest{
 		{
 			":w00t TEST",
-			"w00t",
+			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
 		},
 		{
 			":w00t TEST hello",
-			"w00t",
+			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello"},
 		},
 		{
 			":w00t TEST hello world",
-			"w00t",
+			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world"},
 		},
 		{
 			":w00t TEST :hello world",
-			"w00t",
+			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello world"},
 		},
 		{
 			":w00t TEST hello world :how are you today",
-			"w00t",
+			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
 		},
 
 		{
 			"TEST",
-			"",
+			IrcPrefix{},
 			"TEST",
 			[]string{},
 		},
 		{
 			"TEST hello",
-			"",
+			IrcPrefix{},
 			"TEST",
 			[]string{"hello"},
 		},
 		{
 			"TEST hello world",
-			"",
+			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world"},
 		},
 		{
 			"TEST :hello world",
-			"",
+			IrcPrefix{},
 			"TEST",
 			[]string{"hello world"},
 		},
 		{
 			"TEST hello world :how are you today",
-			"",
+			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
 		},
