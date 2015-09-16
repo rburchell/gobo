@@ -33,7 +33,7 @@ import "time"
 
 type Client struct {
 	conn            net.Conn
-	CommandChannel  chan *parser.Command
+	CommandChannel  chan *parser.IrcCommand
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
 	nick            string
@@ -45,11 +45,11 @@ type Client struct {
 
 // An CommandFunc is a callback function to handle a received command from a
 // client.
-type CommandFunc func(client *Client, command *parser.Command)
+type CommandFunc func(client *Client, command *parser.IrcCommand)
 
 func NewClient(nick string, user string, realname string) *Client {
 	client := new(Client)
-	mchan := make(chan *parser.Command)
+	mchan := make(chan *parser.IrcCommand)
 	client.CommandChannel = mchan
 	client.callbacks = make(map[string][]CommandFunc)
 	client.nick = nick
@@ -142,7 +142,7 @@ func (this *Client) Join(channel string) {
 
 var OnConnected string = "001"
 
-func (this *Client) ProcessCallbacks(c *parser.Command) {
+func (this *Client) ProcessCallbacks(c *parser.IrcCommand) {
 	this.callbacks_mutex.Lock()
 	callbacks := this.callbacks[c.Command]
 	this.callbacks_mutex.Unlock()

@@ -31,11 +31,11 @@ import "fmt"
 func main() {
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
-	c.AddCallback("PRIVMSG", func(c *client.Client, command *parser.Command) {
+	c.AddCallback("PRIVMSG", func(c *client.Client, command *parser.IrcCommand) {
 		fmt.Printf("In PRIVMSG callback: %v\n", command)
 	})
 
-	c.AddCallback(client.OnConnected, func(c *client.Client, command *parser.Command) {
+	c.AddCallback(client.OnConnected, func(c *client.Client, command *parser.IrcCommand) {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
 	})
 

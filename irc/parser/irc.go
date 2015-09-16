@@ -51,7 +51,7 @@ func (this *IrcPrefix) String() string {
 }
 
 // :cameron.freenode.net NOTICE * :*** Looking up your hostname...
-type Command struct {
+type IrcCommand struct {
 	// cameron.freenode.net
 	Prefix IrcPrefix
 
@@ -63,7 +63,7 @@ type Command struct {
 	Parameters []string
 }
 
-func (this *Command) String() string {
+func (this *IrcCommand) String() string {
 	prefix := ""
 	parameters := ""
 
@@ -104,9 +104,9 @@ func splitArg(line string) (arg string, rest string) {
 	return
 }
 
-func ParseLine(line string) *Command {
+func ParseLine(line string) *IrcCommand {
 	args := make([]string, 0)
-	command := new(Command)
+	command := new(IrcCommand)
 
 	if strings.HasPrefix(line, ":") {
 		var pfx string
