@@ -29,7 +29,7 @@ import "github.com/rburchell/gobo/irc/client"
 import "fmt"
 
 func main() {
-	c := client.NewClient("gobo")
+	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
 	c.AddCallback("PRIVMSG", func(c *client.Client, command *parser.Command) {
 		fmt.Printf("In PRIVMSG callback: %v\n", command)

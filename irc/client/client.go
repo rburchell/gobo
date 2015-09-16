@@ -35,17 +35,27 @@ type Client struct {
 	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
+	opts            clientOpts
+}
+
+type clientOpts struct {
+	Nick     string
+	User     string
+	Realname string
 }
 
 // An CommandFunc is a callback function to handle a received command from a
 // client.
 type CommandFunc func(client *Client, command *parser.Command)
 
-func NewClient(nick string) *Client {
+func NewClient(nick string, user string, realname string) *Client {
 	client := new(Client)
 	mchan := make(chan *parser.Command)
 	client.CommandChannel = mchan
 	client.callbacks = make(map[string][]CommandFunc)
+	client.opts.Nick = nick
+	client.opts.User = user
+	client.opts.Realname = realname
 
 	return client
 }
@@ -64,8 +74,8 @@ func (this *Client) Run() {
 	}
 
 	this.Conn = conn
-	this.WriteLine("NICK gobo")
-	this.WriteLine("USER gobo * * :General Purpose IRC Bot")
+	this.WriteLine(fmt.Sprintf("NICK %s", this.opts.Nick))
+	this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.opts.User, this.opts.Realname))
 	this.WriteLine("JOIN #coding")
 
 	bio := bufio.NewReader(conn)
