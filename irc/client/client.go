@@ -91,7 +91,7 @@ func (this *Client) Run() {
 
 		switch command.Command {
 		case "PING":
-			this.handlePing(command)
+			this.WriteLine(fmt.Sprintf("PONG :%s", command.Parameters[0]))
 		default:
 			this.CommandChannel <- command
 		}
@@ -113,8 +113,4 @@ func (this *Client) WriteLine(bytes string) {
 	println("OUT: ", bytes)
 	this.Conn.Write([]byte(bytes))
 	this.Conn.Write([]byte("\r\n"))
-}
-
-func (this *Client) handlePing(c *parser.Command) {
-	this.WriteLine(fmt.Sprintf("PONG :%s", c.Parameters[0]))
 }
