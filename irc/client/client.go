@@ -29,6 +29,7 @@ import "bufio"
 import "net"
 import "fmt"
 import "sync"
+import "time"
 
 type Client struct {
 	conn            net.Conn
@@ -66,28 +67,49 @@ func (this *Client) AddCallback(command string, callback CommandFunc) {
 
 func (this *Client) Run(host string) {
 	var bio *bufio.Reader
+	var reconnDelay int
+
 	for {
 		var buffer []byte
 
 		for this.conn == nil || len(buffer) == 0 {
 			var err error
 			if this.conn == nil {
+				if reconnDelay > 0 {
+					if reconnDelay > 60 {
+						reconnDelay = 60
+					}
+
+					fmt.Printf("Delaying reconnection attempt by %d seconds\n", reconnDelay)
+					timer := time.NewTimer(time.Second * time.Duration(reconnDelay))
+					<-timer.C
+				}
+
 				this.conn, err = net.Dial("tcp", host)
 
 				if err != nil {
-					panic(fmt.Sprintf("Couldn't connect to server: %s", err))
+					// if we're having trouble connecting at all, the problem is
+					// likely not a transient one (e.g. catestrophic server
+					// failure, DNS failure, ...) so increase the timeout
+					// quicker.
+					println("Error connecting: " + err.Error())
+					reconnDelay += 2
+				} else {
+					this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
+					this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
+					bio = bufio.NewReader(this.conn)
 				}
-
-				this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
-				this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
-				bio = bufio.NewReader(this.conn)
 			}
 
-			buffer, _, err = bio.ReadLine()
-			if err != nil {
-				println("Error reading line: " + err.Error())
-				bio = nil
-				this.conn = nil
+			// connection attempt may not have succeeded yet...
+			if this.conn != nil {
+				buffer, _, err = bio.ReadLine()
+				if err != nil {
+					println("Error reading line: " + err.Error())
+					reconnDelay += 1
+					bio = nil
+					this.conn = nil
+				}
 			}
 		}
 
@@ -98,7 +120,15 @@ func (this *Client) Run(host string) {
 		switch command.Command {
 		case "PING":
 			this.WriteLine(fmt.Sprintf("PONG :%s", command.Parameters[0]))
+		case "ERROR":
+			// something is probably very wrong (e.g. a ban/kill)
+			// wait a while longer to reconnect because of this
+			reconnDelay += 8
 		case OnConnected:
+			// only reset delay on a full, successful connection. if we're
+			// banned, we'll successfully establish a socket connection, but
+			// there's no sense in hammering the server with reconnect attempts.
+			reconnDelay = 0
 			this.handleConnected()
 		default:
 			this.CommandChannel <- command
