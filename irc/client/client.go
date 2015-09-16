@@ -92,7 +92,6 @@ func (this *Client) Run(host string) {
 		}
 
 		bufstring := string(buffer)
-		buffer = []byte{}
 		println("IN: ", bufstring)
 		command := parser.ParseLine(bufstring)
 
