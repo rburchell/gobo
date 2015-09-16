@@ -35,6 +35,10 @@ func main() {
 		fmt.Printf("In PRIVMSG callback: %v\n", command)
 	})
 
+	c.AddCallback(client.OnConnected, func(c *client.Client, command *parser.Command) {
+		fmt.Printf("In CONNECTED callback: %v\n", command)
+	})
+
 	go c.Run()
 
 	for {

@@ -76,7 +76,6 @@ func (this *Client) Run() {
 	this.Conn = conn
 	this.WriteLine(fmt.Sprintf("NICK %s", this.opts.Nick))
 	this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.opts.User, this.opts.Realname))
-	this.WriteLine("JOIN #coding")
 
 	bio := bufio.NewReader(conn)
 	for {
@@ -98,6 +97,8 @@ func (this *Client) Run() {
 		}
 	}
 }
+
+var OnConnected string = "001"
 
 func (this *Client) ProcessCallbacks(c *parser.Command) {
 	this.callbacks_mutex.Lock()
