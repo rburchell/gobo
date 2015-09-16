@@ -39,7 +39,7 @@ func main() {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
 	})
 
-	go c.Run()
+	go c.Run("irc.chatspike.net:6667")
 
 	for {
 		select {

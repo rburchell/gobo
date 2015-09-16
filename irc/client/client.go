@@ -66,8 +66,8 @@ func (this *Client) AddCallback(command string, callback CommandFunc) {
 	this.callbacks_mutex.Unlock()
 }
 
-func (this *Client) Run() {
-	conn, err := net.Dial("tcp", "irc.chatspike.net:6667")
+func (this *Client) Run(host string) {
+	conn, err := net.Dial("tcp", host)
 
 	if err != nil {
 		panic(fmt.Sprintf("Couldn't connect to server: %s", err))
