@@ -39,7 +39,7 @@ func main() {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
 	})
 
-	c.Join("#coding")
+	c.Join("#gobo")
 
 	go c.Run("irc.chatspike.net:6667")
 
