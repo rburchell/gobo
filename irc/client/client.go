@@ -31,7 +31,7 @@ import "fmt"
 import "sync"
 
 type Client struct {
-	Conn            net.Conn
+	conn            net.Conn
 	bio             *bufio.Reader
 	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
@@ -69,26 +69,25 @@ func (this *Client) Run(host string) {
 	for {
 		var buffer []byte
 
-		for this.Conn == nil || len(buffer) == 0 {
-			if this.Conn == nil {
-				conn, err := net.Dial("tcp", host)
+		for this.conn == nil || len(buffer) == 0 {
+			var err error
+			if this.conn == nil {
+				this.conn, err = net.Dial("tcp", host)
 
 				if err != nil {
 					panic(fmt.Sprintf("Couldn't connect to server: %s", err))
 				}
 
-				this.Conn = conn
 				this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 				this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
-				this.bio = bufio.NewReader(this.Conn)
+				this.bio = bufio.NewReader(this.conn)
 			}
 
-			var err error
 			buffer, _, err = this.bio.ReadLine()
 			if err != nil {
 				println("Error reading line: " + err.Error())
 				this.bio = nil
-				this.Conn = nil
+				this.conn = nil
 			}
 		}
 
@@ -125,8 +124,8 @@ func (this *Client) ProcessCallbacks(c *parser.Command) {
 
 func (this *Client) WriteLine(bytes string) {
 	println("OUT: ", bytes)
-	this.Conn.Write([]byte(bytes))
-	this.Conn.Write([]byte("\r\n"))
+	this.conn.Write([]byte(bytes))
+	this.conn.Write([]byte("\r\n"))
 }
 
 func (this *Client) handleConnected() {
