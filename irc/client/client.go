@@ -38,6 +38,8 @@ type Client struct {
 	nick            string
 	user            string
 	realname        string
+	irc_channels    []string
+	connected       bool
 }
 
 // An CommandFunc is a callback function to handle a received command from a
@@ -88,10 +90,16 @@ func (this *Client) Run(host string) {
 		switch command.Command {
 		case "PING":
 			this.WriteLine(fmt.Sprintf("PONG :%s", command.Parameters[0]))
+		case OnConnected:
+			this.handleConnected()
 		default:
 			this.CommandChannel <- command
 		}
 	}
+}
+
+func (this *Client) Join(channel string) {
+	this.irc_channels = append(this.irc_channels, channel)
 }
 
 var OnConnected string = "001"
@@ -109,4 +117,11 @@ func (this *Client) WriteLine(bytes string) {
 	println("OUT: ", bytes)
 	this.Conn.Write([]byte(bytes))
 	this.Conn.Write([]byte("\r\n"))
+}
+
+func (this *Client) handleConnected() {
+	this.connected = true
+	for _, channel := range this.irc_channels {
+		this.WriteLine(fmt.Sprintf("JOIN %s", channel))
+	}
 }
