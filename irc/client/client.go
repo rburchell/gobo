@@ -32,6 +32,7 @@ import "sync"
 
 type Client struct {
 	Conn            net.Conn
+	bio             *bufio.Reader
 	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
@@ -65,26 +66,35 @@ func (this *Client) AddCallback(command string, callback CommandFunc) {
 }
 
 func (this *Client) Run(host string) {
-	conn, err := net.Dial("tcp", host)
-
-	if err != nil {
-		panic(fmt.Sprintf("Couldn't connect to server: %s", err))
-	}
-
-	this.Conn = conn
-	this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
-	this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
-
-	bio := bufio.NewReader(conn)
 	for {
-		buffer, _, err := bio.ReadLine()
-		if err != nil {
-			panic("Error reading")
+		var buffer []byte
+
+		for this.Conn == nil || len(buffer) == 0 {
+			if this.Conn == nil {
+				conn, err := net.Dial("tcp", host)
+
+				if err != nil {
+					panic(fmt.Sprintf("Couldn't connect to server: %s", err))
+				}
+
+				this.Conn = conn
+				this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
+				this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
+				this.bio = bufio.NewReader(this.Conn)
+			}
+
+			var err error
+			buffer, _, err = this.bio.ReadLine()
+			if err != nil {
+				println("Error reading line: " + err.Error())
+				this.bio = nil
+				this.Conn = nil
+			}
 		}
 
 		bufstring := string(buffer)
+		buffer = []byte{}
 		println("IN: ", bufstring)
-
 		command := parser.ParseLine(bufstring)
 
 		switch command.Command {
