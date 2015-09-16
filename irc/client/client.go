@@ -32,7 +32,6 @@ import "sync"
 
 type Client struct {
 	conn            net.Conn
-	bio             *bufio.Reader
 	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
@@ -66,6 +65,7 @@ func (this *Client) AddCallback(command string, callback CommandFunc) {
 }
 
 func (this *Client) Run(host string) {
+	var bio *bufio.Reader
 	for {
 		var buffer []byte
 
@@ -80,13 +80,13 @@ func (this *Client) Run(host string) {
 
 				this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 				this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
-				this.bio = bufio.NewReader(this.conn)
+				bio = bufio.NewReader(this.conn)
 			}
 
-			buffer, _, err = this.bio.ReadLine()
+			buffer, _, err = bio.ReadLine()
 			if err != nil {
 				println("Error reading line: " + err.Error())
-				this.bio = nil
+				bio = nil
 				this.conn = nil
 			}
 		}
