@@ -35,13 +35,9 @@ type Client struct {
 	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
-	opts            clientOpts
-}
-
-type clientOpts struct {
-	Nick     string
-	User     string
-	Realname string
+	nick            string
+	user            string
+	realname        string
 }
 
 // An CommandFunc is a callback function to handle a received command from a
@@ -53,9 +49,9 @@ func NewClient(nick string, user string, realname string) *Client {
 	mchan := make(chan *parser.Command)
 	client.CommandChannel = mchan
 	client.callbacks = make(map[string][]CommandFunc)
-	client.opts.Nick = nick
-	client.opts.User = user
-	client.opts.Realname = realname
+	client.nick = nick
+	client.user = user
+	client.realname = realname
 
 	return client
 }
@@ -74,8 +70,8 @@ func (this *Client) Run(host string) {
 	}
 
 	this.Conn = conn
-	this.WriteLine(fmt.Sprintf("NICK %s", this.opts.Nick))
-	this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.opts.User, this.opts.Realname))
+	this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
+	this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
 
 	bio := bufio.NewReader(conn)
 	for {
