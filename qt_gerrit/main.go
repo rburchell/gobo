@@ -24,21 +24,23 @@
 
 package main
 
+import "github.com/rburchell/gobo/irc/parser"
+import "github.com/rburchell/gobo/irc/client"
 import "fmt"
 
 func main() {
-	client := NewClient("gobo")
+	c := client.NewClient("gobo")
 
-	client.AddCallback("PRIVMSG", func(client *Client, command *Command) {
+	c.AddCallback("PRIVMSG", func(c *client.Client, command *parser.Command) {
 		fmt.Printf("In PRIVMSG callback: %v\n", command)
 	})
 
-	go client.Run()
+	go c.Run()
 
 	for {
 		select {
-		case command := <-client.CommandChannel:
-			client.ProcessCallbacks(command)
+		case command := <-c.CommandChannel:
+			c.ProcessCallbacks(command)
 		}
 	}
 }

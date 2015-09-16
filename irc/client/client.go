@@ -22,8 +22,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package main
+package client
 
+import "github.com/rburchell/gobo/irc/parser"
 import "bufio"
 import "net"
 import "fmt"
@@ -31,18 +32,18 @@ import "sync"
 
 type Client struct {
 	Conn            net.Conn
-	CommandChannel  chan *Command
+	CommandChannel  chan *parser.Command
 	callbacks       map[string][]CommandFunc
 	callbacks_mutex sync.Mutex
 }
 
 // An CommandFunc is a callback function to handle a received command from a
 // client.
-type CommandFunc func(client *Client, command *Command)
+type CommandFunc func(client *Client, command *parser.Command)
 
 func NewClient(nick string) *Client {
 	client := new(Client)
-	mchan := make(chan *Command)
+	mchan := make(chan *parser.Command)
 	client.CommandChannel = mchan
 	client.callbacks = make(map[string][]CommandFunc)
 
@@ -77,7 +78,7 @@ func (this *Client) Run() {
 		bufstring := string(buffer)
 		println("IN: ", bufstring)
 
-		command := ParseLine(bufstring)
+		command := parser.ParseLine(bufstring)
 
 		switch command.Command {
 		case "PING":
@@ -88,7 +89,7 @@ func (this *Client) Run() {
 	}
 }
 
-func (this *Client) ProcessCallbacks(c *Command) {
+func (this *Client) ProcessCallbacks(c *parser.Command) {
 	this.callbacks_mutex.Lock()
 	callbacks := this.callbacks[c.Command]
 	this.callbacks_mutex.Unlock()
@@ -103,6 +104,6 @@ func (this *Client) WriteLine(bytes string) {
 	this.Conn.Write([]byte("\r\n"))
 }
 
-func (this *Client) handlePing(c *Command) {
+func (this *Client) handlePing(c *parser.Command) {
 	this.WriteLine(fmt.Sprintf("PONG :%s", c.Parameters[0]))
 }
