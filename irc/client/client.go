@@ -31,7 +31,7 @@ import "fmt"
 import "sync"
 import "time"
 
-type Client struct {
+type IrcClient struct {
 	conn            net.Conn
 	CommandChannel  chan *parser.IrcCommand
 	callbacks       map[string][]CommandFunc
@@ -45,10 +45,10 @@ type Client struct {
 
 // An CommandFunc is a callback function to handle a received command from a
 // client.
-type CommandFunc func(client *Client, command *parser.IrcCommand)
+type CommandFunc func(client *IrcClient, command *parser.IrcCommand)
 
-func NewClient(nick string, user string, realname string) *Client {
-	client := new(Client)
+func NewClient(nick string, user string, realname string) *IrcClient {
+	client := new(IrcClient)
 	mchan := make(chan *parser.IrcCommand)
 	client.CommandChannel = mchan
 	client.callbacks = make(map[string][]CommandFunc)
@@ -59,13 +59,13 @@ func NewClient(nick string, user string, realname string) *Client {
 	return client
 }
 
-func (this *Client) AddCallback(command string, callback CommandFunc) {
+func (this *IrcClient) AddCallback(command string, callback CommandFunc) {
 	this.callbacks_mutex.Lock()
 	this.callbacks[command] = append(this.callbacks[command], callback)
 	this.callbacks_mutex.Unlock()
 }
 
-func (this *Client) Run(host string) {
+func (this *IrcClient) Run(host string) {
 	var bio *bufio.Reader
 	var reconnDelay int
 
@@ -136,13 +136,13 @@ func (this *Client) Run(host string) {
 	}
 }
 
-func (this *Client) Join(channel string) {
+func (this *IrcClient) Join(channel string) {
 	this.irc_channels = append(this.irc_channels, channel)
 }
 
 var OnConnected string = "001"
 
-func (this *Client) ProcessCallbacks(c *parser.IrcCommand) {
+func (this *IrcClient) ProcessCallbacks(c *parser.IrcCommand) {
 	this.callbacks_mutex.Lock()
 	callbacks := this.callbacks[c.Command]
 	this.callbacks_mutex.Unlock()
@@ -151,13 +151,13 @@ func (this *Client) ProcessCallbacks(c *parser.IrcCommand) {
 	}
 }
 
-func (this *Client) WriteLine(bytes string) {
+func (this *IrcClient) WriteLine(bytes string) {
 	println("OUT: ", bytes)
 	this.conn.Write([]byte(bytes))
 	this.conn.Write([]byte("\r\n"))
 }
 
-func (this *Client) handleConnected() {
+func (this *IrcClient) handleConnected() {
 	this.connected = true
 	for _, channel := range this.irc_channels {
 		this.WriteLine(fmt.Sprintf("JOIN %s", channel))
