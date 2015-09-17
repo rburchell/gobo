@@ -139,9 +139,9 @@ func (this *IrcClient) Run(host string) {
 					break
 				}
 			}
-		default:
-			this.CommandChannel <- command
 		}
+
+		this.CommandChannel <- command
 	}
 }
 
