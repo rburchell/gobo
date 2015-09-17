@@ -32,6 +32,7 @@ type ParserTest struct {
 	Prefix     IrcPrefix
 	Command    string
 	Parameters []string
+	BadPrefix  bool
 }
 
 func TestParse(t *testing.T) {
@@ -41,30 +42,35 @@ func TestParse(t *testing.T) {
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
+			false,
 		},
 		{
 			":w00t TEST hello",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello"},
+			false,
 		},
 		{
 			":w00t TEST hello world",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world"},
+			false,
 		},
 		{
 			":w00t TEST :hello world",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello world"},
+			false,
 		},
 		{
 			":w00t TEST hello world :how are you today",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
+			false,
 		},
 
 		{
@@ -72,30 +78,79 @@ func TestParse(t *testing.T) {
 			IrcPrefix{},
 			"TEST",
 			[]string{},
+			false,
 		},
 		{
 			"TEST hello",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello"},
+			false,
 		},
 		{
 			"TEST hello world",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world"},
+			false,
 		},
 		{
 			"TEST :hello world",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello world"},
+			false,
 		},
 		{
 			"TEST hello world :how are you today",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
+			false,
+		},
+
+		// test prefix parsing
+		{
+			":w00t TEST",
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			false,
+		},
+		{
+			":w00t!toot@moo TEST",
+			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo"},
+			"TEST",
+			[]string{},
+			false,
+		},
+		{
+			":w00t!toot@moo.cows TEST",
+			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo.cows"},
+			"TEST",
+			[]string{},
+			false,
+		},
+		{
+			":w00t.toot.moo.cows TEST",
+			IrcPrefix{Server: "w00t.toot.moo.cows"},
+			"TEST",
+			[]string{},
+			false,
+		},
+		{
+			":w00t!toot TEST",
+			IrcPrefix{}, // invalid
+			"TEST",
+			[]string{},
+			true,
+		},
+		{
+			":w00t@toot TEST",
+			IrcPrefix{}, // invalid
+			"TEST",
+			[]string{},
+			true,
 		},
 	}
 
@@ -116,8 +171,12 @@ func TestParse(t *testing.T) {
 		}
 
 		// also test that converting back to string works
-		if c.String() != test.Input {
-			t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
+		// TODO: remove BadPrefix, add a seperate "expected output" for the
+		// BadPrefix cases.
+		if !test.BadPrefix {
+			if c.String() != test.Input {
+				t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
+			}
 		}
 	}
 }
