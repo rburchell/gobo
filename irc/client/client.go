@@ -130,6 +130,15 @@ func (this *IrcClient) Run(host string) {
 			// there's no sense in hammering the server with reconnect attempts.
 			reconnDelay = 0
 			this.handleConnected()
+		case OnKick:
+			for _, channel := range this.irc_channels {
+				if channel == command.Parameters[0] {
+					if command.Parameters[1] == this.nick {
+						this.WriteLine(fmt.Sprintf("JOIN %s", channel))
+					}
+					break
+				}
+			}
 		default:
 			this.CommandChannel <- command
 		}
@@ -141,6 +150,7 @@ func (this *IrcClient) Join(channel string) {
 }
 
 var OnConnected string = "001"
+var OnKick string = "KICK"
 
 func (this *IrcClient) ProcessCallbacks(c *parser.IrcCommand) {
 	this.callbacks_mutex.Lock()
