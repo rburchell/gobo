@@ -223,4 +223,3 @@ func BenchmarkNickUserHostPrefix(b *testing.B) {
 		ParseLine(":nick!user@host TEST")
 	}
 }
-
