@@ -205,3 +205,22 @@ func BenchmarkParseMultipleAndLong(b *testing.B) {
 		ParseLine(":w00t TEST hello world :how are you today")
 	}
 }
+
+func BenchmarkServerPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine(":server.name.goes.here TEST")
+	}
+}
+
+func BenchmarkNickPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine(":nick TEST")
+	}
+}
+
+func BenchmarkNickUserHostPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine(":nick!user@host TEST")
+	}
+}
+
