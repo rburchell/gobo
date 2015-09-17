@@ -31,7 +31,7 @@ import "fmt"
 func main() {
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
-	c.AddCallback("PRIVMSG", func(c *client.IrcClient, command *parser.IrcCommand) {
+	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcCommand) {
 		fmt.Printf("In PRIVMSG callback: %v\n", command)
 	})
 

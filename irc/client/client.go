@@ -151,6 +151,10 @@ func (this *IrcClient) Join(channel string) {
 
 var OnConnected string = "001"
 var OnKick string = "KICK"
+var OnMessage string = "PRIVMSG"
+var OnNotice string = "NOTICE"
+var OnJoin string = "JOIN"
+var OnPart string = "PART"
 
 func (this *IrcClient) ProcessCallbacks(c *parser.IrcCommand) {
 	this.callbacks_mutex.Lock()
