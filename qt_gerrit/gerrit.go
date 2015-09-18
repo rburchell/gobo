@@ -30,7 +30,6 @@ func Gerrit() {
 		},
 	}
 
-	//client, err := ssh.Dial("tcp", "liz.dereferenced.net:22", config)
 	client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
 	if err != nil {
 		panic("Failed to dial: " + err.Error())
