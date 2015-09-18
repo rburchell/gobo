@@ -26,8 +26,10 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
+	"time"
 )
 
 func Gerrit() {
@@ -54,31 +56,72 @@ func Gerrit() {
 		},
 	}
 
-	client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
-	if err != nil {
-		panic("Failed to dial: " + err.Error())
-	}
-	session, err := client.NewSession()
-	if err != nil {
-		panic("fail to create session:" + err.Error())
-	}
-	defer session.Close()
-
-	stdout, err := session.StdoutPipe()
-	if err != nil {
-		panic("Failed to get stdout pipe: " + err.Error())
-	}
-
-	bio := bufio.NewReader(stdout)
-	if err := session.Start("gerrit stream-events"); err != nil {
-		panic("fail to run " + err.Error())
-	}
+	var client *ssh.Client
+	var bio *bufio.Reader
+	var reconnDelay int
 	for {
+		if client == nil {
+			// we use > 1 as a cheap trick here, we allow ourselves one
+			// disconnect (by EOF) before we start delaying reconnection
+			// attempts.
+			//
+			// this can (and probably should) be done in a more obvious fashion.
+			if reconnDelay > 1 {
+				if reconnDelay > 60 {
+					reconnDelay = 60
+				}
+
+				fmt.Printf("Delaying reconnection attempt by %d seconds\n", reconnDelay)
+				timer := time.NewTimer(time.Second * time.Duration(reconnDelay))
+				<-timer.C
+			}
+
+			println("Connecting...")
+			client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
+			if err != nil {
+				println("Failed to dial: " + err.Error())
+				reconnDelay += 4 // something is probably wrong with the server.
+				client = nil
+				continue
+			}
+
+			session, err := client.NewSession()
+			if err != nil {
+				println("fail to create session:" + err.Error())
+				reconnDelay += 4
+				client = nil
+				continue
+			}
+			defer session.Close()
+
+			stdout, err := session.StdoutPipe()
+			if err != nil {
+				println("Failed to get stdout pipe: " + err.Error())
+				reconnDelay += 4
+				client = nil
+				continue
+			}
+
+			bio = bufio.NewReader(stdout)
+			if err := session.Start("gerrit stream-events"); err != nil {
+				println("fail to run " + err.Error())
+				reconnDelay += 10 // uh oh.
+				client = nil
+				continue
+			}
+		}
+
 		println("Reading line")
 		buffer, _, err := bio.ReadLine()
 		if err != nil {
-			panic("Error reading line: " + err.Error())
+			println("Error reading line: " + err.Error())
+			client = nil
+			bio = nil
+			reconnDelay += 1
+		} else {
+			reconnDelay = 0
 		}
+
 		println("O: " + string(buffer))
 	}
 }
