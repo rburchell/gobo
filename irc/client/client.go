@@ -43,7 +43,7 @@ type IrcClient struct {
 	connected       bool
 }
 
-// An CommandFunc is a callback function to handle a received command from a
+// A CommandFunc is a callback function to handle a received command from a
 // client.
 type CommandFunc func(client *IrcClient, command *parser.IrcCommand)
 
