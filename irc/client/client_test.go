@@ -36,4 +36,12 @@ func TestConstruct(t *testing.T) {
 	if c.nick != nick {
 		t.Errorf("Expected: %#v, got %#v", nick, c.nick)
 	}
+
+	if c.user != user {
+		t.Errorf("Expected: %#v, got %#v", user, c.user)
+	}
+
+	if c.realname != realname {
+		t.Errorf("Expected: %#v, got %#v", realname, c.realname)
+	}
 }
