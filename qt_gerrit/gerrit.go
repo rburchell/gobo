@@ -110,6 +110,8 @@ func Gerrit() {
 				reconnDelay += 10 // uh oh.
 				client = nil
 				continue
+			} else {
+				reconnDelay = 0
 			}
 		}
 
@@ -120,8 +122,6 @@ func Gerrit() {
 			client = nil
 			bio = nil
 			reconnDelay += 1
-		} else {
-			reconnDelay = 0
 		}
 
 		println("O: " + string(buffer))
