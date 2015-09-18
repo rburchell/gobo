@@ -50,6 +50,8 @@ func Gerrit() {
 			ssh.PublicKeys(signer),
 		},
 		Config: ssh.Config{
+			// this should be rechecked whenever Gerrit is upgraded, and ideally
+			// done away with once a better cipher is available there.
 			Ciphers: []string{
 				"aes128-cbc",
 			},
