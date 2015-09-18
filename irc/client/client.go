@@ -75,6 +75,7 @@ func (this *IrcClient) Run(host string) {
 		for this.conn == nil || len(buffer) == 0 {
 			var err error
 			if this.conn == nil {
+				this.connected = false
 				if reconnDelay > 0 {
 					if reconnDelay > 60 {
 						reconnDelay = 60
