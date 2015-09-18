@@ -167,6 +167,10 @@ func (this *IrcClient) ProcessCallbacks(c *parser.IrcCommand) {
 }
 
 func (this *IrcClient) WriteLine(bytes string) {
+	if this.conn == nil {
+		return
+	}
+
 	println("OUT: ", bytes)
 	this.conn.Write([]byte(bytes))
 	this.conn.Write([]byte("\r\n"))
