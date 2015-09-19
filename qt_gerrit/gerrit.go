@@ -26,11 +26,49 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"time"
 )
+
+type GerritPerson struct {
+	Name     string `json:"name"`     // J-P Nurmi
+	Email    string `json:"email"`    // jpnurmi@theqtcompany.com
+	Username string `json:"username"` // jpnurmi
+}
+
+type GerritMessage struct {
+	Type   string `json:"type"` // comment-added
+	Change struct {
+		Project string       `json:"project"`       // qt/qtdeclarative
+		Branch  string       `json:"branch"`        // 5.6
+		Id      string       `json:"id"`            // Icefdec91b012b12728367fd54b4d16796233ee12
+		Number  int64        `json:"number,string"` // 125617
+		Subject string       `json:"subject"`       // Make QML composite types inherit enums
+		Owner   GerritPerson `json:"owner"`
+		Url     string       `json:"url"` // https://codereview.qt-project.org/125617
+	} `json:"change"`
+	PatchSet struct {
+		Number         int64        `json:"number,string"` // 9
+		Revision       string       `json:"revision"`      // 52c9ebcd78379b0eacc1476237720e06abf286b3
+		Parents        []string     `json:"parents"`       // ["9688aa4fe3195147881dc0969bf000bfc8a65e5e"]
+		Ref            string       `json:"ref"`           // refs/changes/17/125617/9
+		Uploader       GerritPerson `json:"uploader"`
+		CreatedOn      int64        `json:"createdOn"` // 1442413012
+		Author         GerritPerson `json:"author"`
+		SizeInsertions int64        `json:"sizeInsertions"` // 80
+		SizeDeletions  int64        `json:"sizeDeletions"`  // -13
+	} `json:"patchSet"`
+	Author    GerritPerson `json:"author"`
+	Approvals []struct {
+		Type        string `json:"type"`
+		Description string `json:"description"`
+		Value       int64  `json:"value,string"`
+	} `json:"approvals"`
+	Comment string `json:"comment"`
+}
 
 func Gerrit() {
 	var err error
@@ -117,14 +155,20 @@ func Gerrit() {
 		}
 
 		println("Reading line")
-		buffer, _, err := bio.ReadLine()
+		jsonBlob, _, err := bio.ReadLine()
 		if err != nil {
 			println("Error reading line: " + err.Error())
 			client = nil
 			bio = nil
 			reconnDelay += 1
+		} else {
+			println("O: " + string(jsonBlob))
+			var message GerritMessage
+			err := json.Unmarshal(jsonBlob, &message)
+			if err != nil {
+				panic("Error processing JSON! " + err.Error())
+			}
+			fmt.Printf("%+v", message)
 		}
-
-		println("O: " + string(buffer))
 	}
 }
