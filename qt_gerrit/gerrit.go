@@ -68,6 +68,15 @@ type GerritMessage struct {
 		Value       int64  `json:"value,string"`
 	} `json:"approvals"`
 	Comment string `json:"comment"`
+
+	// used in ref-updated
+	Submitter GerritPerson `json:"submitter"`
+	RefUpdate struct {
+		OldRev  string `json:"oldRev"`
+		NewRev  string `"json:"newRev"`
+		RefName string `"json:refName"`
+		Project string `"json:project"`
+	} `json:"refname"`
 }
 
 func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *bufio.Reader) {
