@@ -166,6 +166,10 @@ func (this *IrcClient) ProcessCallbacks(c *parser.IrcCommand) {
 	}
 }
 
+func (this *IrcClient) WriteMessage(target string, message string) {
+	this.WriteLine("PRIVMSG " + target + " :" + message)
+}
+
 func (this *IrcClient) WriteLine(bytes string) {
 	if this.conn == nil {
 		return
