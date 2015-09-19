@@ -77,6 +77,8 @@ type GerritMessage struct {
 		RefName string `"json:refName"`
 		Project string `"json:project"`
 	} `json:"refname"`
+
+	OriginalJson []byte
 }
 
 func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *bufio.Reader) {
@@ -144,41 +146,50 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 	return client, bio
 }
 
-func Gerrit() {
+type GerritClient struct {
+	MessageChannel chan *GerritMessage
+	client         *ssh.Client
+}
+
+func NewClient() *GerritClient {
+	client := new(GerritClient)
+	client.MessageChannel = make(chan *GerritMessage)
+	return client
+}
+
+func (this *GerritClient) Run() {
 	keybytes, err := ioutil.ReadFile("/Users/burchr/.ssh/id_rsa")
 	if err != nil {
 		panic("Failed to read SSH key: " + err.Error())
 	}
 
-	println(string(keybytes))
 	signer, err := ssh.ParsePrivateKey(keybytes)
 	if err != nil {
 		panic("Failed to parse SSH key: " + err.Error())
 	}
 
-	var client *ssh.Client
 	var bio *bufio.Reader
 	var reconnectDelay int
 	for {
-		for client == nil {
-			client, bio = connectToGerrit(&signer, &reconnectDelay)
+		for this.client == nil {
+			this.client, bio = connectToGerrit(&signer, &reconnectDelay)
 		}
 
-		println("Reading line")
 		jsonBlob, _, err := bio.ReadLine()
 		if err != nil {
 			println("Error reading line: " + err.Error())
-			client = nil
+			this.client = nil
 			bio = nil
 			reconnectDelay += 1
 		} else {
-			println("O: " + string(jsonBlob))
 			var message GerritMessage
 			err := json.Unmarshal(jsonBlob, &message)
+			message.OriginalJson = jsonBlob
 			if err != nil {
 				panic("Error processing JSON! " + err.Error())
 			}
-			fmt.Printf("%+v\n", message)
+
+			this.MessageChannel <- &message
 		}
 	}
 }

@@ -40,13 +40,17 @@ func main() {
 	})
 
 	c.Join("#gobo")
-
 	go c.Run("irc.chatspike.net:6667")
+
+	gc := NewClient()
+	go gc.Run()
 
 	for {
 		select {
 		case command := <-c.CommandChannel:
 			c.ProcessCallbacks(command)
+		case message := <-gc.MessageChannel:
+			c.WriteMessage("#gobo", fmt.Sprintf("Got a Gerrit message: %#v\n", message))
 		}
 	}
 }
