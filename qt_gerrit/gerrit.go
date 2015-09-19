@@ -70,8 +70,72 @@ type GerritMessage struct {
 	Comment string `json:"comment"`
 }
 
+func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *bufio.Reader) {
+	// we use > 1 as a cheap trick here, we allow ourselves one
+	// disconnect (by EOF) before we start delaying reconnection
+	// attempts.
+	//
+	// this can (and probably should) be done in a more obvious fashion.
+	if *reconnectDelay > 1 {
+		if *reconnectDelay > 60 {
+			*reconnectDelay = 60
+		}
+
+		fmt.Printf("Delaying reconnection attempt by %d seconds\n", *reconnectDelay)
+		timer := time.NewTimer(time.Second * time.Duration(*reconnectDelay))
+		<-timer.C
+	}
+
+	config := &ssh.ClientConfig{
+		User: "w00t",
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(*signer),
+		},
+		Config: ssh.Config{
+			// this should be rechecked whenever Gerrit is upgraded, and ideally
+			// done away with once a better cipher is available there.
+			Ciphers: []string{
+				"aes128-cbc",
+			},
+		},
+	}
+
+	println("Connecting...")
+	client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
+	if err != nil {
+		println("Failed to dial: " + err.Error())
+		*reconnectDelay += 4 // something is probably wrong with the server.
+		return nil, nil
+	}
+
+	session, err := client.NewSession()
+	if err != nil {
+		println("fail to create session:" + err.Error())
+		*reconnectDelay += 4
+		return nil, nil
+	}
+	//defer session.Close()
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		println("Failed to get stdout pipe: " + err.Error())
+		*reconnectDelay += 4
+		return nil, nil
+	}
+
+	bio := bufio.NewReader(stdout)
+	if err := session.Start("gerrit stream-events"); err != nil {
+		println("fail to run " + err.Error())
+		*reconnectDelay += 10 // uh oh.
+		return nil, nil
+	} else {
+		*reconnectDelay = 0
+	}
+
+	return client, bio
+}
+
 func Gerrit() {
-	var err error
 	keybytes, err := ioutil.ReadFile("/Users/burchr/.ssh/id_rsa")
 	if err != nil {
 		panic("Failed to read SSH key: " + err.Error())
@@ -83,75 +147,12 @@ func Gerrit() {
 		panic("Failed to parse SSH key: " + err.Error())
 	}
 
-	config := &ssh.ClientConfig{
-		User: "w00t",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		Config: ssh.Config{
-			// this should be rechecked whenever Gerrit is upgraded, and ideally
-			// done away with once a better cipher is available there.
-			Ciphers: []string{
-				"aes128-cbc",
-			},
-		},
-	}
-
 	var client *ssh.Client
 	var bio *bufio.Reader
-	var reconnDelay int
+	var reconnectDelay int
 	for {
-		if client == nil {
-			// we use > 1 as a cheap trick here, we allow ourselves one
-			// disconnect (by EOF) before we start delaying reconnection
-			// attempts.
-			//
-			// this can (and probably should) be done in a more obvious fashion.
-			if reconnDelay > 1 {
-				if reconnDelay > 60 {
-					reconnDelay = 60
-				}
-
-				fmt.Printf("Delaying reconnection attempt by %d seconds\n", reconnDelay)
-				timer := time.NewTimer(time.Second * time.Duration(reconnDelay))
-				<-timer.C
-			}
-
-			println("Connecting...")
-			client, err = ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
-			if err != nil {
-				println("Failed to dial: " + err.Error())
-				reconnDelay += 4 // something is probably wrong with the server.
-				client = nil
-				continue
-			}
-
-			session, err := client.NewSession()
-			if err != nil {
-				println("fail to create session:" + err.Error())
-				reconnDelay += 4
-				client = nil
-				continue
-			}
-			defer session.Close()
-
-			stdout, err := session.StdoutPipe()
-			if err != nil {
-				println("Failed to get stdout pipe: " + err.Error())
-				reconnDelay += 4
-				client = nil
-				continue
-			}
-
-			bio = bufio.NewReader(stdout)
-			if err := session.Start("gerrit stream-events"); err != nil {
-				println("fail to run " + err.Error())
-				reconnDelay += 10 // uh oh.
-				client = nil
-				continue
-			} else {
-				reconnDelay = 0
-			}
+		for client == nil {
+			client, bio = connectToGerrit(&signer, &reconnectDelay)
 		}
 
 		println("Reading line")
@@ -160,7 +161,7 @@ func Gerrit() {
 			println("Error reading line: " + err.Error())
 			client = nil
 			bio = nil
-			reconnDelay += 1
+			reconnectDelay += 1
 		} else {
 			println("O: " + string(jsonBlob))
 			var message GerritMessage
