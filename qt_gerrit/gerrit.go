@@ -33,6 +33,7 @@ import (
 )
 
 func Gerrit() {
+	var err error
 	keybytes, err := ioutil.ReadFile("/Users/burchr/.ssh/id_rsa")
 	if err != nil {
 		panic("Failed to read SSH key: " + err.Error())
@@ -79,7 +80,7 @@ func Gerrit() {
 			}
 
 			println("Connecting...")
-			client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
+			client, err = ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
 			if err != nil {
 				println("Failed to dial: " + err.Error())
 				reconnDelay += 4 // something is probably wrong with the server.
