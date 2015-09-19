@@ -169,7 +169,7 @@ func Gerrit() {
 			if err != nil {
 				panic("Error processing JSON! " + err.Error())
 			}
-			fmt.Printf("%+v", message)
+			fmt.Printf("%+v\n", message)
 		}
 	}
 }
