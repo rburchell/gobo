@@ -49,8 +49,57 @@ func main() {
 		select {
 		case command := <-c.CommandChannel:
 			c.ProcessCallbacks(command)
-		case message := <-gc.MessageChannel:
-			c.WriteMessage("#gobo", fmt.Sprintf("Got a Gerrit message: %#v\n", message))
+		case msg := <-gc.MessageChannel:
+			if msg.Type == "comment-added" {
+				reviewstring := ""
+
+				for _, approval := range msg.Approvals {
+					if approval.Value < 0 {
+						// dark red
+					} else if approval.Value > 0 {
+						// dark green
+					}
+
+					atype := approval.Type
+
+					// newer Gerrit uses long form type strings
+					// canonicalize them into something useful
+					if approval.Type == "Code-Review" {
+						atype = "C"
+					} else if approval.Type == "Sanity-Review" {
+						atype = "S"
+					} else if approval.Type == "CRVW" {
+						atype = "C"
+					} else if approval.Type == "SRVW" {
+						atype = "S"
+					} else {
+						panic("Unknown approval type " + atype)
+					}
+
+					// TODO: color wrap
+					reviewstring += fmt.Sprintf("%s: %d", atype, approval.Value)
+				}
+
+				// TODO: handle color when we add it
+				if msg.Author.Email == "qt_sanitybot@qt-project.org" && reviewstring == "S: 1" {
+					// drop these, they're spammy
+				} else {
+					if len(msg.Approvals) > 0 {
+						msg := fmt.Sprintf("[%s/%s] %s (%s) reviewed by %s: %s",
+							msg.Change.Project, msg.Change.Branch,
+							msg.Change.Subject, msg.Change.Url,
+							msg.Author.Name, reviewstring)
+						c.WriteMessage("#gobo", msg)
+					} else {
+						msg := fmt.Sprintf("[%s/%s] %s (%s) commented by %s",
+							msg.Change.Project, msg.Change.Branch,
+							msg.Change.Subject, msg.Change.Url,
+							msg.Author.Name)
+						c.WriteMessage("#gobo", msg)
+					}
+				}
+			}
+			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}
 	}
 }
