@@ -24,10 +24,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package gobo
+package fuzz
+
+import "github.com/rburchell/gobo/irc/parser"
 
 func Fuzz(data []byte) int {
-	c := ParseLine(string(data))
+	c := parser.ParseLine(string(data))
 	if c == nil {
 		return 0
 	}
