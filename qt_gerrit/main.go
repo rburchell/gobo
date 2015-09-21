@@ -85,16 +85,16 @@ func main() {
 					// drop these, they're spammy
 				} else {
 					if len(msg.Approvals) > 0 {
-						msg := fmt.Sprintf("[%s/%s] %s (%s) reviewed by %s: %s",
+						msg := fmt.Sprintf("[%s/%s] %s from %s reviewed by %s - %s",
 							msg.Change.Project, msg.Change.Branch,
-							msg.Change.Subject, msg.Change.Url,
-							msg.Author.Name, reviewstring)
+							msg.Change.Subject, msg.PatchSet.Uploader.Name,
+							msg.Author.Name, msg.Change.Url)
 						c.WriteMessage("#gobo", msg)
 					} else {
-						msg := fmt.Sprintf("[%s/%s] %s (%s) commented by %s",
+						msg := fmt.Sprintf("[%s/%s] %s from %s commented by %s - %s",
 							msg.Change.Project, msg.Change.Branch,
-							msg.Change.Subject, msg.Change.Url,
-							msg.Author.Name)
+							msg.Change.Subject, msg.PatchSet.Uploader.Name,
+							msg.Author.Name, msg.Change.Url)
 						c.WriteMessage("#gobo", msg)
 					}
 				}
