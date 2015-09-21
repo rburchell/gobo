@@ -31,6 +31,25 @@ import "regexp"
 import "net/http"
 import "io/ioutil"
 import "encoding/json"
+import "bytes"
+
+type GerritChange struct {
+	Kind      string `json:"kind"`
+	Id        string `json:"id"`
+	Project   string `json:"project"`
+	Branch    string `json:"branch"`
+	ChangeId  string `json:"change_id"`
+	Subject   string `json:"subject"`
+	Status    string `json:"status"`
+	Created   string `json:"created"`
+	Updated   string `json:"updated"`
+	Mergeable bool   `json:"mergeable"`
+	SortKey   string `json:"_sortkey"`
+	Number    int    `json:"_number"`
+	Owner     struct {
+		Name string `json:"name"`
+	} `json:"owner"`
+}
 
 type JiraBug struct {
 	Fields struct {
@@ -74,6 +93,56 @@ func main() {
 				} else {
 					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bug, bugReport.ErrorMessages[0]))
 				}
+			}
+		}()
+
+		cr := regexp.MustCompile(`(I[0-9a-f]{40})`)
+		changes := cr.FindAllString(command.Parameters[1], -1)
+
+		go func() {
+			for _, change := range changes {
+				res, err := http.Get("https://codereview.qt-project.org/changes/" + change)
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", change, err.Error()))
+					continue
+				}
+
+				jsonBlob, err := ioutil.ReadAll(res.Body)
+				res.Body.Close()
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while reading response): %s", change, err.Error()))
+					continue
+				}
+
+				// From the Gerrit documentation:
+				// To prevent against Cross Site Script Inclusion (XSSI) attacks, the JSON
+				// response body starts with a magic prefix line that must be stripped before
+				// feeding the rest of the response body to a JSON parser:
+				//    )]}'
+				//    [ ... valid JSON ... ]
+				if !bytes.HasPrefix(jsonBlob, []byte(")]}'\n")) {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", change))
+					continue
+				}
+
+				// strip off the gerrit magic
+				jsonBlob = jsonBlob[5:]
+
+				var change GerritChange
+				err = json.Unmarshal(jsonBlob, &change)
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", change, err.Error()))
+					continue
+				}
+
+				if len(change.Id) == 0 {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s: malformed reply", change))
+					continue
+				}
+
+				c.WriteMessage(command.Parameters[0], fmt.Sprintf("[%s/%s] %s from %s - %s (%s)",
+					change.Project, change.Branch, change.Subject, change.Owner.Name,
+					fmt.Sprintf("https://codereview.qt-project.org/%s", change.Number), change.Status))
 			}
 		}()
 	})
