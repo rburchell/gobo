@@ -98,6 +98,23 @@ func main() {
 						c.WriteMessage("#gobo", msg)
 					}
 				}
+			} else if msg.Type == "patchset-created" {
+				if msg.PatchSet.Number == 1 {
+					msg := fmt.Sprintf("[%s/%s] %s pushed by %s - %s",
+						msg.Change.Project, msg.Change.Branch,
+						msg.Change.Subject, msg.PatchSet.Uploader.Name,
+						msg.Change.Url)
+					c.WriteMessage("#gobo", msg)
+				} else {
+					// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
+					// seperately since someone else updating a patch is
+					// significant
+					msg := fmt.Sprintf("[%s/%s] %s updated by %s - %s",
+						msg.Change.Project, msg.Change.Branch,
+						msg.Change.Subject, msg.PatchSet.Uploader.Name,
+						msg.Change.Url)
+					c.WriteMessage("#gobo", msg)
+				}
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}
