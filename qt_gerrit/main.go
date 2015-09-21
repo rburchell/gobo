@@ -54,6 +54,10 @@ func main() {
 				reviewstring := ""
 
 				for _, approval := range msg.Approvals {
+					if len(reviewstring) > 0 {
+						reviewstring += " "
+					}
+
 					if approval.Value < 0 {
 						// dark red
 					} else if approval.Value > 0 {
