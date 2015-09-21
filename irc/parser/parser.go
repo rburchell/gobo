@@ -127,6 +127,8 @@ func ParseLine(line string) *IrcCommand {
 				// nick@host? invalid case, we empty the prefix
 			} else if at == -1 {
 				// nick!user? invalid case, we empty the prefix
+			} else if bang > at {
+				// nick@user!host or similar => automatically invalid
 			} else {
 				command.Prefix.Nick = pfx[0:bang]
 				command.Prefix.User = pfx[bang+1 : at]

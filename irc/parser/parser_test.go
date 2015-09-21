@@ -152,6 +152,13 @@ func TestParse(t *testing.T) {
 			[]string{},
 			true,
 		},
+		{
+			":@! TEST",
+			IrcPrefix{}, // invalid
+			"TEST",
+			[]string{},
+			true,
+		},
 	}
 
 	for _, test := range tests {
