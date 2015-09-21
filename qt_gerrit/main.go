@@ -27,12 +27,55 @@ package main
 import "github.com/rburchell/gobo/irc/parser"
 import "github.com/rburchell/gobo/irc/client"
 import "fmt"
+import "regexp"
+import "net/http"
+import "io/ioutil"
+import "encoding/json"
+
+type JiraBug struct {
+	Fields struct {
+		Summary string `json:"summary"`
+	} `json:"fields"`
+
+	ErrorMessages []string `json:"errorMessages"`
+}
 
 func main() {
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
 	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcCommand) {
-		fmt.Printf("In PRIVMSG callback: %v\n", command)
+		br := regexp.MustCompile(`\b(Q[A-Z]+-[0-9]+)\b`)
+		bugs := br.FindAllString(command.Parameters[1], -1)
+
+		go func() {
+			for _, bug := range bugs {
+				res, err := http.Get("https://bugreports.qt.io/rest/api/2/issue/" + bug)
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bug, err.Error()))
+					continue
+				}
+
+				jsonBlob, err := ioutil.ReadAll(res.Body)
+				res.Body.Close()
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bug, err.Error()))
+					continue
+				}
+
+				var bugReport JiraBug
+				err = json.Unmarshal(jsonBlob, &bugReport)
+				if err != nil {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bug, err.Error()))
+					continue
+				}
+
+				if len(bugReport.ErrorMessages) == 0 {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s\n", bugReport.Fields.Summary, bug))
+				} else {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bug, bugReport.ErrorMessages[0]))
+				}
+			}
+		}()
 	})
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcCommand) {
