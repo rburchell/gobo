@@ -68,6 +68,12 @@ func main() {
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
 	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcCommand) {
+		directRegex := regexp.MustCompile(`^([^ ]+[,:] )`)
+		directTo := directRegex.FindString(command.Parameters[1]) // was this directed at someone?
+		if len(directTo) == 0 {
+			directTo = command.Prefix.Nick + ": " // if not, default to sender of the message
+		}
+
 		br := regexp.MustCompile(`\b(Q[A-Z]+-[0-9]+)\b`)
 		bugs := br.FindAllString(command.Parameters[1], -1)
 
@@ -103,7 +109,11 @@ func main() {
 					continue
 				}
 
-				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s (%s)", bugReport.Fields.Summary, bug, bugReport.Fields.Status.Name))
+				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s%s - https://bugreports.qt.io/browse/%s (%s)",
+					directTo,
+					bugReport.Fields.Summary,
+					bug,
+					bugReport.Fields.Status.Name))
 			}
 		}()
 
@@ -151,8 +161,8 @@ func main() {
 					continue
 				}
 
-				c.WriteMessage(command.Parameters[0], fmt.Sprintf("[%s/%s] %s from %s - %s (%s)",
-					change.Project, change.Branch, change.Subject, change.Owner.Name,
+				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s[%s/%s] %s from %s - %s (%s)",
+					directTo, change.Project, change.Branch, change.Subject, change.Owner.Name,
 					fmt.Sprintf("https://codereview.qt-project.org/%d", change.Number), change.Status))
 			}
 		}()
