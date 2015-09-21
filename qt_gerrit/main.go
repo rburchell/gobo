@@ -125,6 +125,10 @@ func main() {
 					msg.Submitter.Name,
 					msg.Change.Url)
 				c.WriteMessage("#gobo", msg)
+			} else if msg.Type == "reviewer-added" {
+				// ignore, too spammy
+			} else if msg.Type == "ref-updated" {
+				// ignore, too spammy
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}
