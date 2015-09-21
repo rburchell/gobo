@@ -51,84 +51,11 @@ func main() {
 			c.ProcessCallbacks(command)
 		case msg := <-gc.MessageChannel:
 			if msg.Type == "comment-added" {
-				reviewstring := ""
-
-				for _, approval := range msg.Approvals {
-					if len(reviewstring) > 0 {
-						reviewstring += " "
-					}
-
-					if approval.Value < 0 {
-						// dark red
-					} else if approval.Value > 0 {
-						// dark green
-					}
-
-					atype := approval.Type
-
-					// newer Gerrit uses long form type strings
-					// canonicalize them into something useful
-					if approval.Type == "Code-Review" {
-						atype = "C"
-					} else if approval.Type == "Sanity-Review" {
-						atype = "S"
-					} else if approval.Type == "CRVW" {
-						atype = "C"
-					} else if approval.Type == "SRVW" {
-						atype = "S"
-					} else {
-						panic("Unknown approval type " + atype)
-					}
-
-					// TODO: color wrap
-					reviewstring += fmt.Sprintf("%s: %d", atype, approval.Value)
-				}
-
-				// TODO: handle color when we add it
-				if msg.Author.Email == "qt_sanitybot@qt-project.org" && reviewstring == "S: 1" {
-					// drop these, they're spammy
-				} else {
-					if len(msg.Approvals) > 0 {
-						msg := fmt.Sprintf("[%s/%s] %s from %s reviewed by %s: %s - %s",
-							msg.Change.Project, msg.Change.Branch,
-							msg.Change.Subject, msg.PatchSet.Uploader.Name,
-							msg.Author.Name, reviewstring, msg.Change.Url)
-						c.WriteMessage("#gobo", msg)
-					} else {
-						msg := fmt.Sprintf("[%s/%s] %s from %s commented by %s - %s",
-							msg.Change.Project, msg.Change.Branch,
-							msg.Change.Subject, msg.PatchSet.Uploader.Name,
-							msg.Author.Name, msg.Change.Url)
-						c.WriteMessage("#gobo", msg)
-					}
-				}
+				handleCommentAdded(c, msg)
 			} else if msg.Type == "patchset-created" {
-				if msg.PatchSet.Number == 1 {
-					msg := fmt.Sprintf("[%s/%s] %s pushed by %s - %s",
-						msg.Change.Project, msg.Change.Branch,
-						msg.Change.Subject, msg.PatchSet.Uploader.Name,
-						msg.Change.Url)
-					c.WriteMessage("#gobo", msg)
-				} else {
-					// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
-					// seperately since someone else updating a patch is
-					// significant
-					msg := fmt.Sprintf("[%s/%s] %s updated by %s - %s",
-						msg.Change.Project, msg.Change.Branch,
-						msg.Change.Subject, msg.PatchSet.Uploader.Name,
-						msg.Change.Url)
-					c.WriteMessage("#gobo", msg)
-				}
+				handlePatchSetCreated(c, msg)
 			} else if msg.Type == "change-merged" {
-				// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
-				// seperately since someone else updating a patch is
-				// significant
-				msg := fmt.Sprintf("[%s/%s] %s authored by by %s was cherry-picked by %s - %s",
-					msg.Change.Project, msg.Change.Branch,
-					msg.Change.Subject, msg.PatchSet.Uploader.Name,
-					msg.Submitter.Name,
-					msg.Change.Url)
-				c.WriteMessage("#gobo", msg)
+				handleChangeMerged(c, msg)
 			} else if msg.Type == "reviewer-added" {
 				// ignore, too spammy
 			} else if msg.Type == "ref-updated" {
