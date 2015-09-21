@@ -90,11 +90,17 @@ func main() {
 					continue
 				}
 
-				if len(bugReport.ErrorMessages) == 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s\n", bugReport.Fields.Summary, bug))
-				} else {
+				if len(bugReport.ErrorMessages) > 0 {
 					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bug, bugReport.ErrorMessages[0]))
+					continue
 				}
+
+				if len(bugReport.Fields.Summary) == 0 {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: malformed reply", bug))
+					continue
+				}
+
+				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s\n", bugReport.Fields.Summary, bug))
 			}
 		}()
 
