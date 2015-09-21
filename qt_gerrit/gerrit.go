@@ -175,7 +175,8 @@ func (this *GerritClient) Run() {
 			this.client, bio = connectToGerrit(&signer, &reconnectDelay)
 		}
 
-		jsonBlob, _, err := bio.ReadLine()
+		jsonBlob, err := bio.ReadBytes('\n')
+
 		if err != nil {
 			println("Error reading line: " + err.Error())
 			this.client = nil
