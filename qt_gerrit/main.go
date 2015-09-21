@@ -153,7 +153,7 @@ func main() {
 
 				c.WriteMessage(command.Parameters[0], fmt.Sprintf("[%s/%s] %s from %s - %s (%s)",
 					change.Project, change.Branch, change.Subject, change.Owner.Name,
-					fmt.Sprintf("https://codereview.qt-project.org/%s", change.Number), change.Status))
+					fmt.Sprintf("https://codereview.qt-project.org/%d", change.Number), change.Status))
 			}
 		}()
 	})
