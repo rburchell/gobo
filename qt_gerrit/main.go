@@ -51,6 +51,8 @@ type GerritChange struct {
 	} `json:"owner"`
 }
 
+// TODO: utterly incomplete, because this is a big response and we only care about a
+// small fraction of it right now.
 type JiraBug struct {
 	Fields struct {
 		Summary string `json:"summary"`
