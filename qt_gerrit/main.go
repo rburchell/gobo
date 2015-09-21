@@ -56,6 +56,9 @@ type GerritChange struct {
 type JiraBug struct {
 	Fields struct {
 		Summary string `json:"summary"`
+		Status  struct {
+			Name string `json:"name"`
+		} `json:"status"`
 	} `json:"fields"`
 
 	ErrorMessages []string `json:"errorMessages"`
@@ -100,7 +103,7 @@ func main() {
 					continue
 				}
 
-				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s\n", bugReport.Fields.Summary, bug))
+				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s - https://bugreports.qt.io/browse/%s (%s)", bugReport.Fields.Summary, bug, bugReport.Fields.Status.Name))
 			}
 		}()
 
