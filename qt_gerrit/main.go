@@ -115,6 +115,16 @@ func main() {
 						msg.Change.Url)
 					c.WriteMessage("#gobo", msg)
 				}
+			} else if msg.Type == "change-merged" {
+				// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
+				// seperately since someone else updating a patch is
+				// significant
+				msg := fmt.Sprintf("[%s/%s] %s authored by by %s was cherry-picked by %s - %s",
+					msg.Change.Project, msg.Change.Branch,
+					msg.Change.Subject, msg.PatchSet.Uploader.Name,
+					msg.Submitter.Name,
+					msg.Change.Url)
+				c.WriteMessage("#gobo", msg)
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}
