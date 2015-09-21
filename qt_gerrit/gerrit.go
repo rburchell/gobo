@@ -186,7 +186,7 @@ func (this *GerritClient) Run() {
 			err := json.Unmarshal(jsonBlob, &message)
 			message.OriginalJson = jsonBlob
 			if err != nil {
-				println(jsonBlob)
+				println("BAD JSON: " + string(jsonBlob))
 				panic("Error processing JSON! " + err.Error())
 			}
 
