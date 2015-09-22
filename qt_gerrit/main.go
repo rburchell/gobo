@@ -189,6 +189,8 @@ func main() {
 				handlePatchSetCreated(c, msg)
 			} else if msg.Type == "change-merged" {
 				handleChangeMerged(c, msg)
+			} else if msg.Type == "merge-failed" {
+				handleMergeFailed(c, msg)
 			} else if msg.Type == "reviewer-added" {
 				// ignore, too spammy
 			} else if msg.Type == "ref-updated" {

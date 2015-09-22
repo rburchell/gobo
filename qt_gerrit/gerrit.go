@@ -78,6 +78,9 @@ type GerritMessage struct {
 		Project string `"json:project"`
 	} `json:"refname"`
 
+	// used in merge-failed
+	Reason string `json:"reason"`
+
 	OriginalJson []byte
 }
 

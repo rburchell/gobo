@@ -24,6 +24,7 @@
 
 package main
 
+import "strings"
 import "fmt"
 import "github.com/rburchell/gobo/irc/client"
 
@@ -109,5 +110,15 @@ func handleChangeMerged(c *client.IrcClient, msg *GerritMessage) {
 		msg.Change.Subject, msg.PatchSet.Uploader.Name,
 		msg.Submitter.Name,
 		msg.Change.Url)
+	c.WriteMessage("#gobo", str)
+}
+
+func handleMergeFailed(c *client.IrcClient, msg *GerritMessage) {
+	reasons := strings.Split(msg.Reason, "\n")
+	reason := reasons[0]
+	str := fmt.Sprintf("[%s/%s] %s tried to cherry-pick %s, but the merge failed because: %s - %s",
+		msg.Change.Project, msg.Change.Branch,
+		msg.Submitter.Name, msg.Change.Subject,
+		reason, msg.Change.Url)
 	c.WriteMessage("#gobo", str)
 }
