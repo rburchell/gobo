@@ -28,11 +28,11 @@ import "testing"
 import "reflect"
 
 type ParserTest struct {
-	Input      string
-	Prefix     IrcPrefix
-	Command    string
-	Parameters []string
-	BadPrefix  bool
+	Input          string
+	Prefix         IrcPrefix
+	Command        string
+	Parameters     []string
+	ExpectedOutput string
 }
 
 func TestParse(t *testing.T) {
@@ -42,35 +42,35 @@ func TestParse(t *testing.T) {
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
-			false,
+			":w00t TEST",
 		},
 		{
 			":w00t TEST hello",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello"},
-			false,
+			":w00t TEST hello",
 		},
 		{
 			":w00t TEST hello world",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world"},
-			false,
+			":w00t TEST hello world",
 		},
 		{
 			":w00t TEST :hello world",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello world"},
-			false,
+			":w00t TEST :hello world",
 		},
 		{
 			":w00t TEST hello world :how are you today",
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
-			false,
+			":w00t TEST hello world :how are you today",
 		},
 
 		{
@@ -78,35 +78,35 @@ func TestParse(t *testing.T) {
 			IrcPrefix{},
 			"TEST",
 			[]string{},
-			false,
+			"TEST",
 		},
 		{
 			"TEST hello",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello"},
-			false,
+			"TEST hello",
 		},
 		{
 			"TEST hello world",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world"},
-			false,
+			"TEST hello world",
 		},
 		{
 			"TEST :hello world",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello world"},
-			false,
+			"TEST :hello world",
 		},
 		{
 			"TEST hello world :how are you today",
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
-			false,
+			"TEST hello world :how are you today",
 		},
 
 		// test prefix parsing
@@ -115,49 +115,49 @@ func TestParse(t *testing.T) {
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
-			false,
+			":w00t TEST",
 		},
 		{
 			":w00t!toot@moo TEST",
 			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo"},
 			"TEST",
 			[]string{},
-			false,
+			":w00t!toot@moo TEST",
 		},
 		{
 			":w00t!toot@moo.cows TEST",
 			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo.cows"},
 			"TEST",
 			[]string{},
-			false,
+			":w00t!toot@moo.cows TEST",
 		},
 		{
 			":w00t.toot.moo.cows TEST",
 			IrcPrefix{Server: "w00t.toot.moo.cows"},
 			"TEST",
 			[]string{},
-			false,
+			":w00t.toot.moo.cows TEST",
 		},
 		{
 			":w00t!toot TEST",
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
-			true,
+			"TEST",
 		},
 		{
 			":w00t@toot TEST",
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
-			true,
+			"TEST",
 		},
 		{
 			":@! TEST",
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
-			true,
+			"TEST",
 		},
 	}
 
@@ -178,12 +178,8 @@ func TestParse(t *testing.T) {
 		}
 
 		// also test that converting back to string works
-		// TODO: remove BadPrefix, add a seperate "expected output" for the
-		// BadPrefix cases.
-		if !test.BadPrefix {
-			if c.String() != test.Input {
-				t.Errorf("Expected: %#v, got %#v", test.Input, c.String())
-			}
+		if c.String() != test.ExpectedOutput {
+			t.Errorf("Expected: %#v, got %#v", test.ExpectedOutput, c.String())
 		}
 	}
 }
