@@ -74,9 +74,9 @@ type GerritMessage struct {
 	Submitter GerritPerson `json:"submitter"`
 	RefUpdate struct {
 		OldRev  string `json:"oldRev"`
-		NewRev  string `"json:"newRev"`
-		RefName string `"json:refName"`
-		Project string `"json:project"`
+		NewRev  string `json:"newRev"`
+		RefName string `json:"refName"`
+		Project string `json:"project"`
 	} `json:"refname"`
 
 	// used in merge-failed
