@@ -98,8 +98,6 @@ func (this *IrcClient) Run(host string) {
 				} else {
 					// TODO: handle 443:
 					// :weber.freenode.net 433 * qt_gerrit :Nickname is already in use.
-					this.conn.SetWriteDeadline(time.Now().Add(16 * time.Second))
-					this.conn.SetReadDeadline(time.Now().Add(60 * 5 * time.Second))
 					this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 					this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
 					bio = bufio.NewReader(this.conn)
@@ -108,6 +106,7 @@ func (this *IrcClient) Run(host string) {
 
 			// connection attempt may not have succeeded yet...
 			if this.conn != nil {
+				this.conn.SetReadDeadline(time.Now().Add(60 * 5 * time.Second))
 				buffer, _, err = bio.ReadLine()
 				if err != nil {
 					println("Error reading line: " + err.Error())
