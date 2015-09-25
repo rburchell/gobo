@@ -2,20 +2,21 @@
 qt_gerrit is a bot for interacting with Qt's web services (codereview & JIRA)
 from IRC.
 
-# How to run
+# setup
+* go get
+* Remember to uncomment aes128cbcID in golang.org/x/crypto/ssh/cipher.go,
+  until Gerrit finally gets upgraded.
+* go build
 
-Set GERRIT_USER to your Gerrit login, GERRIT_PRIVATE_KEY to the
-path to your SSH private key for Gerrit
+# how to run
 
-Also set NICKSERV_USER and NICKSERV_PASS to your NickServ credentials.
+You need a bunch of environment variables set:
 
-Set IRC_SERVER to the hostname:port you want to connect to (e.g.
-irc.freenode.net:6667)
-
-Set IRC_CHANNELS to a list of channels you want the bot to join, comma
-separated, e.g: #qt-gerrit,#qt-labs
-
-Set GERRIT_CHANNEL to the channel you want to publish Gerrit activity to.
-
-Remember to uncomment aes128cbcID in golang.org/x/crypto/ssh/cipher.go,
-until Gerrit finally gets upgraded.
+* GERRIT_USER: your Gerrit username
+* GERRIT_PRIVATE_KEY: the path to your SSH private key for Gerrit
+* NICKSERV_USER: NickServ username
+* NICKSERV_PASS: NickServ password
+* IRC_SERVER: hostname:port to the IRC server you want to announce on
+* IRC_CHANNELS: a comma-separated list of channels you want the bot in,
+  e.g. #qt-labs,#qt-gerrit
+* GERRIT_CHANNEL: the channel you want to publish Gerrit activity to.
