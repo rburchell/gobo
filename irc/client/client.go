@@ -86,7 +86,7 @@ func (this *IrcClient) Run(host string) {
 					<-timer.C
 				}
 
-				this.conn, err = net.Dial("tcp", host)
+				this.conn, err = net.DialTimeout("tcp", host, time.Second*5)
 
 				if err != nil {
 					// if we're having trouble connecting at all, the problem is
@@ -98,6 +98,8 @@ func (this *IrcClient) Run(host string) {
 				} else {
 					// TODO: handle 443:
 					// :weber.freenode.net 433 * qt_gerrit :Nickname is already in use.
+					this.conn.SetWriteDeadline(time.Now().Add(16 * time.Second))
+					this.conn.SetReadDeadline(time.Now().Add(60 * 5 * time.Second))
 					this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 					this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
 					bio = bufio.NewReader(this.conn)
