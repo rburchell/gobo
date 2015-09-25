@@ -91,42 +91,42 @@ func main() {
 				Timeout: time.Duration(4 * time.Second),
 			}
 
-			for _, bug := range bugs {
-				res, err := hclient.Get("https://bugreports.qt.io/rest/api/2/issue/" + bug)
+			for _, bugId := range bugs {
+				res, err := hclient.Get("https://bugreports.qt.io/rest/api/2/issue/" + bugId)
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bug, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bugId, err.Error()))
 					continue
 				}
 
 				jsonBlob, err := ioutil.ReadAll(res.Body)
 				res.Body.Close()
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bug, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bugId, err.Error()))
 					continue
 				}
 
-				var bugReport JiraBug
-				err = json.Unmarshal(jsonBlob, &bugReport)
+				var bug JiraBug
+				err = json.Unmarshal(jsonBlob, &bug)
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bug, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bugId, err.Error()))
 					continue
 				}
 
-				if len(bugReport.ErrorMessages) > 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bug, bugReport.ErrorMessages[0]))
+				if len(bug.ErrorMessages) > 0 {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bugId, bug.ErrorMessages[0]))
 					continue
 				}
 
-				if len(bugReport.Fields.Summary) == 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: malformed reply", bug))
+				if len(bug.Fields.Summary) == 0 {
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: malformed reply", bugId))
 					continue
 				}
 
 				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s%s - https://bugreports.qt.io/browse/%s (%s)",
 					directTo,
-					bugReport.Fields.Summary,
-					bug,
-					bugReport.Fields.Status.Name))
+					bug.Fields.Summary,
+					bugId,
+					bug.Fields.Status.Name))
 			}
 		}()
 
@@ -138,17 +138,17 @@ func main() {
 				Timeout: time.Duration(4 * time.Second),
 			}
 
-			for _, change := range changes {
-				res, err := hclient.Get("https://codereview.qt-project.org/changes/" + change)
+			for _, changeId := range changes {
+				res, err := hclient.Get("https://codereview.qt-project.org/changes/" + changeId)
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", change, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", changeId, err.Error()))
 					continue
 				}
 
 				jsonBlob, err := ioutil.ReadAll(res.Body)
 				res.Body.Close()
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while reading response): %s", change, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while reading response): %s", changeId, err.Error()))
 					continue
 				}
 
@@ -159,7 +159,7 @@ func main() {
 				//    )]}'
 				//    [ ... valid JSON ... ]
 				if !bytes.HasPrefix(jsonBlob, []byte(")]}'\n")) {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", change))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", changeId))
 					continue
 				}
 
@@ -169,12 +169,12 @@ func main() {
 				var change GerritChange
 				err = json.Unmarshal(jsonBlob, &change)
 				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", change, err.Error()))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", changeId, err.Error()))
 					continue
 				}
 
 				if len(change.Id) == 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s: malformed reply", change))
+					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s: malformed reply", changeId))
 					continue
 				}
 
