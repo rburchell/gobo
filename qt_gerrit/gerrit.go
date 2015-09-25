@@ -122,6 +122,7 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 
 	println("Connecting...")
 	client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
+	// TODO: implement deadlines
 	if err != nil {
 		println("Failed to dial: " + err.Error())
 		*reconnectDelay += 4 // something is probably wrong with the server.
