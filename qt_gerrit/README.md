@@ -13,8 +13,7 @@ Set IRC_SERVER to the hostname:port you want to connect to (e.g.
 irc.freenode.net:6667)
 
 Set IRC_CHANNELS to a list of channels you want the bot to join, comma
-separated, e.g:
-#qt-gerrit,#qt-labs
+separated, e.g: #qt-gerrit,#qt-labs
 
 Set GERRIT_CHANNEL to the channel you want to publish Gerrit activity to.
 
