@@ -26,7 +26,10 @@ package main
 
 import "strings"
 import "fmt"
+import "os"
 import "github.com/rburchell/gobo/irc/client"
+
+var gerritChannel = os.Getenv("GERRIT_CHANNEL")
 
 func handleCommentAdded(c *client.IrcClient, msg *GerritMessage) {
 	reviewstring := ""
@@ -71,13 +74,13 @@ func handleCommentAdded(c *client.IrcClient, msg *GerritMessage) {
 				msg.Change.Project, msg.Change.Branch,
 				msg.Change.Subject, msg.PatchSet.Uploader.Name,
 				msg.Author.Name, reviewstring, msg.Change.Url)
-			c.WriteMessage("#gobo", msg)
+			c.WriteMessage(gerritChannel, msg)
 		} else {
 			msg := fmt.Sprintf("[%s/%s] %s from %s commented by %s - %s",
 				msg.Change.Project, msg.Change.Branch,
 				msg.Change.Subject, msg.PatchSet.Uploader.Name,
 				msg.Author.Name, msg.Change.Url)
-			c.WriteMessage("#gobo", msg)
+			c.WriteMessage(gerritChannel, msg)
 		}
 	}
 }
@@ -88,7 +91,7 @@ func handlePatchSetCreated(c *client.IrcClient, msg *GerritMessage) {
 			msg.Change.Project, msg.Change.Branch,
 			msg.Change.Subject, msg.PatchSet.Uploader.Name,
 			msg.Change.Url)
-		c.WriteMessage("#gobo", msg)
+		c.WriteMessage(gerritChannel, msg)
 	} else {
 		// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
 		// seperately since someone else updating a patch is
@@ -97,7 +100,7 @@ func handlePatchSetCreated(c *client.IrcClient, msg *GerritMessage) {
 			msg.Change.Project, msg.Change.Branch,
 			msg.Change.Subject, msg.PatchSet.Uploader.Name,
 			msg.Change.Url)
-		c.WriteMessage("#gobo", msg)
+		c.WriteMessage(gerritChannel, msg)
 	}
 }
 
@@ -110,7 +113,7 @@ func handleChangeMerged(c *client.IrcClient, msg *GerritMessage) {
 		msg.Change.Subject, msg.PatchSet.Uploader.Name,
 		msg.Submitter.Name,
 		msg.Change.Url)
-	c.WriteMessage("#gobo", str)
+	c.WriteMessage(gerritChannel, str)
 }
 
 func handleMergeFailed(c *client.IrcClient, msg *GerritMessage) {

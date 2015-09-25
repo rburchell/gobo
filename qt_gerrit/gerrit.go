@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -100,8 +101,13 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 		<-timer.C
 	}
 
+	gerritUser := os.Getenv("GERRIT_USER")
+	if len(gerritUser) == 0 {
+		panic("Must provide GERRIT_USER environment variable.")
+	}
+
 	config := &ssh.ClientConfig{
-		User: "w00t",
+		User: gerritUser,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(*signer),
 		},
@@ -161,7 +167,12 @@ func NewClient() *GerritClient {
 }
 
 func (this *GerritClient) Run() {
-	keybytes, err := ioutil.ReadFile("/Users/burchr/.ssh/id_rsa")
+	gerritKey := os.Getenv("GERRIT_PRIVATE_KEY")
+	if len(gerritKey) == 0 {
+		panic("Must provide GERRIT_PRIVATE_KEY environment variable.")
+	}
+
+	keybytes, err := ioutil.ReadFile(gerritKey)
 	if err != nil {
 		panic("Failed to read SSH key: " + err.Error())
 	}

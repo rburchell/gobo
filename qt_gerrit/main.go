@@ -32,6 +32,7 @@ import "net/http"
 import "io/ioutil"
 import "encoding/json"
 import "bytes"
+import "os"
 
 type GerritChange struct {
 	Kind      string `json:"kind"`
@@ -65,6 +66,11 @@ type JiraBug struct {
 }
 
 func main() {
+	// TODO: move all env var checks here.
+	if len(gerritChannel) == 0 {
+		panic("Must provide environment variable GERRIT_CHANNEL")
+	}
+
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
 	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcCommand) {
@@ -170,10 +176,32 @@ func main() {
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcCommand) {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
+
+		nsUser := os.Getenv("NICKSERV_USER")
+		if len(nsUser) == 0 {
+			panic("Must provide environment variable NICKSERV_USER")
+		}
+
+		nsPass := os.Getenv("NICKSERV_PASS")
+		if len(nsPass) == 0 {
+			panic("Must provide environment variable NICKSERV_PASS")
+		}
+
+		c.WriteLine(fmt.Sprintf("NS IDENTIFY %s %s", nsUser, nsPass))
 	})
 
-	c.Join("#gobo")
-	go c.Run("irc.chatspike.net:6667")
+	ircServer := os.Getenv("IRC_SERVER")
+	if len(ircServer) == 0 {
+		panic("Must provide environment variable IRC_SERVER")
+	}
+
+	ircChannels := os.Getenv("IRC_CHANNELS")
+	if len(ircChannels) == 0 {
+		panic("Must provide environment variable IRC_CHANNELS")
+	}
+
+	c.Join(ircChannels)
+	go c.Run(ircServer)
 
 	gc := NewClient()
 	go gc.Run()
