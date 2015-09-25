@@ -104,6 +104,7 @@ func splitArg(line string) (arg string, rest string) {
 	return
 }
 
+// TODO: communicate errors to caller
 func ParseLine(line string) *IrcCommand {
 	args := make([]string, 0)
 	command := new(IrcCommand)
