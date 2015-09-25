@@ -24,15 +24,17 @@
 
 package main
 
-import "github.com/rburchell/gobo/irc/parser"
-import "github.com/rburchell/gobo/irc/client"
-import "fmt"
-import "regexp"
-import "net/http"
-import "io/ioutil"
-import "encoding/json"
-import "bytes"
-import "os"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/rburchell/gobo/irc/client"
+	"github.com/rburchell/gobo/irc/parser"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"regexp"
+)
 
 type GerritChange struct {
 	Kind      string `json:"kind"`

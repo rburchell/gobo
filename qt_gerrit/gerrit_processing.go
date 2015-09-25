@@ -24,10 +24,12 @@
 
 package main
 
-import "strings"
-import "fmt"
-import "os"
-import "github.com/rburchell/gobo/irc/client"
+import (
+	"fmt"
+	"github.com/rburchell/gobo/irc/client"
+	"os"
+	"strings"
+)
 
 var gerritChannel = os.Getenv("GERRIT_CHANNEL")
 
