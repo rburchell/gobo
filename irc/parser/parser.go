@@ -26,7 +26,6 @@ package parser
 
 import "fmt"
 import "strings"
-import "regexp"
 
 type IrcPrefix struct {
 	Server string
@@ -89,12 +88,8 @@ func (this *IrcCommand) String() string {
 	return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
 }
 
-var (
-	spacesExpr = regexp.MustCompile(` +`)
-)
-
 func splitArg(line string) (arg string, rest string) {
-	parts := spacesExpr.Split(line, 2)
+	parts := strings.SplitN(line, " ", 2)
 	if len(parts) > 0 {
 		arg = parts[0]
 	}
