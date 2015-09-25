@@ -125,5 +125,5 @@ func handleMergeFailed(c *client.IrcClient, msg *GerritMessage) {
 		msg.Change.Project, msg.Change.Branch,
 		msg.Submitter.Name, msg.Change.Subject,
 		reason, msg.Change.Url)
-	c.WriteMessage("#gobo", str)
+	c.WriteMessage(gerritChannel, str)
 }
