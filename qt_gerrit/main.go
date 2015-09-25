@@ -34,6 +34,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 )
 
 type GerritChange struct {
@@ -86,8 +87,12 @@ func main() {
 		bugs := br.FindAllString(command.Parameters[1], -1)
 
 		go func() {
+			hclient := http.Client{
+				Timeout: time.Duration(4 * time.Second),
+			}
+
 			for _, bug := range bugs {
-				res, err := http.Get("https://bugreports.qt.io/rest/api/2/issue/" + bug)
+				res, err := hclient.Get("https://bugreports.qt.io/rest/api/2/issue/" + bug)
 				if err != nil {
 					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bug, err.Error()))
 					continue
@@ -129,8 +134,12 @@ func main() {
 		changes := cr.FindAllString(command.Parameters[1], -1)
 
 		go func() {
+			hclient := http.Client{
+				Timeout: time.Duration(4 * time.Second),
+			}
+
 			for _, change := range changes {
-				res, err := http.Get("https://codereview.qt-project.org/changes/" + change)
+				res, err := hclient.Get("https://codereview.qt-project.org/changes/" + change)
 				if err != nil {
 					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", change, err.Error()))
 					continue
