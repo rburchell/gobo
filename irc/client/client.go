@@ -179,8 +179,8 @@ func (this *IrcClient) WriteLine(bytes string) {
 	}
 
 	println("OUT: ", bytes)
-    _, err := this.conn.Write([]byte(bytes))
-    _, err2 := this.conn.Write([]byte("\r\n"))
+	_, err := this.conn.Write([]byte(bytes))
+	_, err2 := this.conn.Write([]byte("\r\n"))
 
 	if err != nil || err2 != nil {
 		this.conn.Close()
