@@ -29,6 +29,7 @@ import "reflect"
 
 type ParserTest struct {
 	Input          string
+	Tags           []IrcTag
 	Prefix         IrcPrefix
 	Command        string
 	Parameters     []string
@@ -39,6 +40,7 @@ func TestParse(t *testing.T) {
 	tests := []ParserTest{
 		{
 			":w00t TEST",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -46,6 +48,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t TEST hello",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello"},
@@ -53,6 +56,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t TEST hello world",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world"},
@@ -60,6 +64,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t TEST :hello world",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello world"},
@@ -67,6 +72,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t TEST hello world :how are you today",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
@@ -75,6 +81,7 @@ func TestParse(t *testing.T) {
 
 		{
 			"TEST",
+			[]IrcTag{},
 			IrcPrefix{},
 			"TEST",
 			[]string{},
@@ -82,6 +89,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"TEST hello",
+			[]IrcTag{},
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello"},
@@ -89,6 +97,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"TEST hello world",
+			[]IrcTag{},
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world"},
@@ -96,6 +105,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"TEST :hello world",
+			[]IrcTag{},
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello world"},
@@ -103,6 +113,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"TEST hello world :how are you today",
+			[]IrcTag{},
 			IrcPrefix{},
 			"TEST",
 			[]string{"hello", "world", "how are you today"},
@@ -112,6 +123,7 @@ func TestParse(t *testing.T) {
 		// test prefix parsing
 		{
 			":w00t TEST",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -119,6 +131,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t!toot@moo TEST",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo"},
 			"TEST",
 			[]string{},
@@ -126,6 +139,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t!toot@moo.cows TEST",
+			[]IrcTag{},
 			IrcPrefix{Nick: "w00t", User: "toot", Host: "moo.cows"},
 			"TEST",
 			[]string{},
@@ -133,6 +147,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t.toot.moo.cows TEST",
+			[]IrcTag{},
 			IrcPrefix{Server: "w00t.toot.moo.cows"},
 			"TEST",
 			[]string{},
@@ -140,6 +155,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t!toot TEST",
+			[]IrcTag{},
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
@@ -147,6 +163,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":w00t@toot TEST",
+			[]IrcTag{},
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
@@ -154,10 +171,70 @@ func TestParse(t *testing.T) {
 		},
 		{
 			":@! TEST",
+			[]IrcTag{},
 			IrcPrefix{}, // invalid
 			"TEST",
 			[]string{},
 			"TEST",
+		},
+
+		// ircv3 message-tags
+		{
+			"@aaaa :w00t TEST",
+			[]IrcTag{IrcTag{Key: "aaaa"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			"@aaaa;bbb;cccc :w00t TEST",
+			[]IrcTag{IrcTag{Key: "aaaa"}, IrcTag{Key: "bbb"}, IrcTag{Key: "cccc"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			"@aaaa=test;bbb :w00t TEST",
+			[]IrcTag{IrcTag{Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			"@example.org/aaaa=test;bbb :w00t TEST",
+			[]IrcTag{IrcTag{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			"@example.org/aaaa=test;another.example.org/bbb :w00t TEST",
+			[]IrcTag{IrcTag{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, IrcTag{VendorPrefix: "another.example.org", Key: "bbb"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			"@aaaa=test;bbb=another :w00t TEST",
+			[]IrcTag{IrcTag{Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb", Value: "another"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
+		},
+		{
+			// test escaping of tag values
+			"@aaaa=magic\\:things\\s\\\\happen\\rhere\\nsometimes :w00t TEST",
+			[]IrcTag{IrcTag{Key: "aaaa", Value: "magic;things \\happen\rhere\nsometimes"}},
+			IrcPrefix{Nick: "w00t"},
+			"TEST",
+			[]string{},
+			":w00t TEST",
 		},
 	}
 
@@ -165,6 +242,25 @@ func TestParse(t *testing.T) {
 		t.Logf("Testing: %s", test.Input)
 
 		c := ParseLine(test.Input)
+
+		if len(test.Tags) > 0 {
+			for tidx, tag := range test.Tags {
+				actualtag := c.Tags[tidx]
+
+				if tag.Key != actualtag.Key {
+					t.Errorf("Expected: tag with key %#v, got %#v", tag.Key, actualtag.Key)
+				}
+
+				if tag.VendorPrefix != actualtag.VendorPrefix {
+					t.Errorf("Expected: tag with key %#v from vendor %#v, got vendor %#v", tag.Key, tag.VendorPrefix, actualtag.VendorPrefix)
+				}
+
+				if tag.Value != actualtag.Value {
+					t.Errorf("Expected: tag with key %#v with value %#v, got value %#v", tag.Key, tag.Value, actualtag.Value)
+				}
+			}
+		}
+
 		if c.Prefix != test.Prefix {
 			t.Errorf("Expected: %#v, got %#v", test.Prefix, c.Prefix)
 		}
@@ -224,5 +320,29 @@ func BenchmarkNickPrefix(b *testing.B) {
 func BenchmarkNickUserHostPrefix(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ParseLine(":nick!user@host TEST")
+	}
+}
+
+func BenchmarkTagKeyOnly(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine("@aaaa :nick TEST")
+	}
+}
+
+func BenchmarkTagKeysOnly(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine("@aaaa;bbbb :nick TEST")
+	}
+}
+
+func BenchmarkTagKeysAndValues(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine("@aaaa=onetwoonetwo;bbbb=onetwoonetwo :nick TEST")
+	}
+}
+
+func BenchmarkTagKeyWithVendorPrefix(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine("@example.org/aaaa :nick TEST")
 	}
 }

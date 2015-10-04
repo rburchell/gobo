@@ -34,6 +34,12 @@ type IrcPrefix struct {
 	Host   string
 }
 
+type IrcTag struct {
+	VendorPrefix string
+	Key          string
+	Value        string
+}
+
 func (this *IrcPrefix) String() string {
 	if len(this.Server) > 0 {
 		return this.Server
@@ -51,6 +57,8 @@ func (this *IrcPrefix) String() string {
 
 // :cameron.freenode.net NOTICE * :*** Looking up your hostname...
 type IrcCommand struct {
+	Tags []IrcTag
+
 	// cameron.freenode.net
 	Prefix IrcPrefix
 
@@ -103,6 +111,52 @@ func splitArg(line string) (arg string, rest string) {
 func ParseLine(line string) *IrcCommand {
 	args := make([]string, 0)
 	command := new(IrcCommand)
+
+	// ircv3 message tags extension
+	if strings.HasPrefix(line, "@") {
+		var tagstr string
+		tagstr, line = splitArg(line)
+		tagstr = tagstr[1:len(tagstr)]
+
+		// aaa=bbb;ccc;example.com/ddd=eee
+		// split each tag and process seperately
+		tags := strings.Split(tagstr, ";")
+		for _, tag := range tags {
+			var eq int = strings.Index(tag, "=")
+			var key string
+			var tagobj IrcTag
+
+			if eq == -1 {
+				// no equals sign means this is a tag with a key (and possibly
+				// vendor prefix) only, no value.
+				key = tag
+			} else {
+				// if we have an equals sign, we have a value too.
+				key = tag[0:eq]
+
+				// the value itself requires some string escaping.
+				vstr := tag[eq+1 : len(tag)]
+				vstr = strings.Replace(vstr, "\\:", ";", -1)
+				vstr = strings.Replace(vstr, "\\s", " ", -1)
+				vstr = strings.Replace(vstr, "\\\\", "\\", -1)
+				vstr = strings.Replace(vstr, "\\r", "\r", -1)
+				vstr = strings.Replace(vstr, "\\n", "\n", -1)
+				tagobj.Value = vstr
+			}
+
+			// finally, find the vendor prefix - if any.
+			var slash int = strings.Index(key, "/")
+			if slash != -1 {
+				tagobj.VendorPrefix = key[0:slash]
+				tagobj.Key = key[slash+1 : len(key)]
+			} else {
+				tagobj.Key = key
+			}
+
+			// and save the tag.
+			command.Tags = append(command.Tags, tagobj)
+		}
+	}
 
 	if strings.HasPrefix(line, ":") {
 		var pfx string
