@@ -22,6 +22,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// Package parser provides a simple interface implementing a tolerant IRC
+// message parser.
 package parser
 
 import "fmt"
