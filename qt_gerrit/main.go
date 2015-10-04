@@ -76,7 +76,7 @@ func main() {
 
 	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
 
-	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcCommand) {
+	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcMessage) {
 		directRegex := regexp.MustCompile(`^([^ ]+[,:] )`)
 		directTo := directRegex.FindString(command.Parameters[1]) // was this directed at someone?
 		if len(directTo) == 0 {
@@ -185,7 +185,7 @@ func main() {
 		}()
 	})
 
-	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcCommand) {
+	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
 
 		nsUser := os.Getenv("NICKSERV_USER")

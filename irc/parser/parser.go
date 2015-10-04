@@ -27,7 +27,7 @@ package parser
 import "fmt"
 import "strings"
 
-// IrcPrefix represents the sender of an IrcCommand.
+// IrcPrefix represents the sender of an IrcMessage.
 // A prefix may either be a server, or a user. If the prefix is representing a
 // server, the Server member will be a non-empty string representing the
 // server name. If the prefix is representing a user, the Nick, User and Host
@@ -78,13 +78,13 @@ func (this *IrcPrefix) String() string {
 	}
 }
 
-// IrcCommand is the primary interface for interaction with the parser. The
-// parser is responsible for generating IrcCommand instances after parsing from
+// IrcMessage is the primary interface for interaction with the parser. The
+// parser is responsible for generating IrcMessage instances after parsing from
 // the input provided by the caller.
 //
-// An IrcCommand instance represents a full instance of an IRC protocol message,
+// An IrcMessage instance represents a full instance of an IRC protocol message,
 // as defined by RFC1459 (and other optional extensions).
-type IrcCommand struct {
+type IrcMessage struct {
 	// Tags, if any - see the IRCv3.2 message tags extension.
 	Tags []IrcTag
 
@@ -104,8 +104,8 @@ type IrcCommand struct {
 	Parameters []string
 }
 
-// String converts an IrcCommand to its string representation.
-func (this *IrcCommand) String() string {
+// String converts an IrcMessage to its string representation.
+func (this *IrcMessage) String() string {
 	prefix := ""
 	parameters := ""
 
@@ -146,11 +146,11 @@ func splitArg(line string) (arg string, rest string) {
 
 // ParseLine takes the given IRC protocol message in line and processes it.
 //
-// It returns a usable IrcCommand struct instance.
-func ParseLine(line string) *IrcCommand {
+// It returns a usable IrcMessage struct instance.
+func ParseLine(line string) *IrcMessage {
 	// BUG(w00t): ParseLine does not currently have a way of reporting errors.
 	args := make([]string, 0)
-	command := new(IrcCommand)
+	command := new(IrcMessage)
 
 	// ircv3 message tags extension
 	if strings.HasPrefix(line, "@") {
