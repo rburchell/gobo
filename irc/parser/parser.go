@@ -27,19 +27,42 @@ package parser
 import "fmt"
 import "strings"
 
+// IrcPrefix represents the sender of an IrcCommand.
+// A prefix may either be a server, or a user. If the prefix is representing a
+// server, the Server member will be a non-empty string representing the
+// server name. If the prefix is representing a user, the Nick, User and Host
+// fields will be filled (as much as is possible from the given message).
 type IrcPrefix struct {
+	// The name of the server this prefix represents.
 	Server string
-	Nick   string
-	User   string
-	Host   string
+
+	// The nickname of the user this prefix represents.
+	Nick string
+
+	// The username of the user this prefix represents.
+	User string
+
+	// The hostname of the user this prefix represents.
+	Host string
 }
 
+// IrcTag represents a message tag.
+// A message tag is an optional extension to the IRC protocol, defined in the
+// IRCv3.2 specification (http://ircv3.net/specs/core/message-tags-3.2.html).
+// Message tags provide additional metadata about the command in question.
 type IrcTag struct {
+	// For nonstandardised tags, a message tag has a vendor prefix, defining
+	// which software vendor is responsible for this tag (for example, znc.in)
 	VendorPrefix string
-	Key          string
-	Value        string
+
+	// The key of the tag (e.g. server-time)
+	Key string
+
+	// Message tags may also have an optional value associated with them.
+	Value string
 }
 
+// String converts an IrcPrefix to its string representation.
 func (this *IrcPrefix) String() string {
 	if len(this.Server) > 0 {
 		return this.Server
@@ -55,21 +78,33 @@ func (this *IrcPrefix) String() string {
 	}
 }
 
-// :cameron.freenode.net NOTICE * :*** Looking up your hostname...
+// IrcCommand is the primary interface for interaction with the parser. The
+// parser is responsible for generating IrcCommand instances after parsing from
+// the input provided by the caller.
+//
+// An IrcCommand instance represents a full instance of an IRC protocol message,
+// as defined by RFC1459 (and other optional extensions).
 type IrcCommand struct {
+	// Tags, if any - see the IRCv3.2 message tags extension.
 	Tags []IrcTag
 
-	// cameron.freenode.net
+	// The sender of the message. See IrcPrefix for more information.
 	Prefix IrcPrefix
 
-	// NOTICE
+	// An uppercased string containing the command.
 	Command string
 
-	// [0]: *
-	// [1]: *** Looking up your hostname...
+	// A slice of strings providing all the parameters to the command.
+	// Note that the final parameter of IRC messages starting with a colon, e.g.
+	// PRIVSG foo :bar moo cow) will coalesce the final three words into a
+	// single entry in the slice when parsing - such that parameters in
+	// this case would be:
+	// 0: foo
+	// 1: bar moo cow
 	Parameters []string
 }
 
+// String converts an IrcCommand to its string representation.
 func (this *IrcCommand) String() string {
 	prefix := ""
 	parameters := ""
@@ -96,6 +131,8 @@ func (this *IrcCommand) String() string {
 	return fmt.Sprintf("%s%s%s", prefix, this.Command, parameters)
 }
 
+// Given a string line, splits by a space delimiter and returns the first word
+// in arg, and the rest of the string for further processing.
 func splitArg(line string) (arg string, rest string) {
 	parts := strings.SplitN(line, " ", 2)
 	if len(parts) > 0 {
@@ -107,8 +144,11 @@ func splitArg(line string) (arg string, rest string) {
 	return
 }
 
-// TODO: communicate errors to caller
+// ParseLine takes the given IRC protocol message in line and processes it.
+//
+// It returns a usable IrcCommand struct instance.
 func ParseLine(line string) *IrcCommand {
+	// BUG(w00t): ParseLine does not currently have a way of reporting errors.
 	args := make([]string, 0)
 	command := new(IrcCommand)
 
