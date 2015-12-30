@@ -184,7 +184,6 @@ func (this *IrcClient) WriteLine(bytes string) {
 
 	if err != nil || err2 != nil {
 		this.conn.Close()
-		this.conn = nil
 	}
 }
 
