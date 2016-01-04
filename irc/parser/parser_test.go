@@ -346,3 +346,9 @@ func BenchmarkTagKeyWithVendorPrefix(b *testing.B) {
 		ParseLine("@example.org/aaaa :nick TEST")
 	}
 }
+
+func BenchmarkTagKeyWithVendorPrefixAndLotsOfParameters(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseLine("@example.org/aaaa :nick!user@host TEST this is a command with rather a :large number of parameters included")
+	}
+}
