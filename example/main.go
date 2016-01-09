@@ -43,7 +43,7 @@ func main() {
 
 	c.Join("#gobo")
 
-	go c.Run("irc.chatspike.net:6697")
+	go c.Run("irc.chatspike.net:6667")
 
 	for {
 		select {
