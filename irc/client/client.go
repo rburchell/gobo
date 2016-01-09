@@ -66,13 +66,11 @@ func (this *IrcClient) AddCallback(command string, callback CommandFunc) {
 }
 
 func (this *IrcClient) Run(host string) {
-	var bio *bufio.Reader
+	var scanner *bufio.Scanner
 	var reconnDelay int
 
 	for {
-		var buffer []byte
-
-		for this.conn == nil || len(buffer) == 0 {
+		for this.conn == nil {
 			var err error
 			if this.conn == nil {
 				this.connected = false
@@ -100,23 +98,26 @@ func (this *IrcClient) Run(host string) {
 					// :weber.freenode.net 433 * qt_gerrit :Nickname is already in use.
 					this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 					this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
-					bio = bufio.NewReader(this.conn)
-				}
-			}
-
-			// connection attempt may not have succeeded yet...
-			if this.conn != nil {
-				this.conn.SetReadDeadline(time.Now().Add(60 * 5 * time.Second))
-				buffer, _, err = bio.ReadLine()
-				if err != nil {
-					println("Error reading line: " + err.Error())
-					reconnDelay += 1
-					bio = nil
-					this.conn = nil
+					scanner = bufio.NewScanner(this.conn)
 				}
 			}
 		}
 
+		this.conn.SetReadDeadline(time.Now().Add(60 * 5 * time.Second))
+		ret := scanner.Scan()
+		if ret == false {
+			if scanner.Err() != nil {
+				println("Error reading line: " + scanner.Err().Error())
+			} else {
+				println("Error reading line: EOF")
+			}
+			reconnDelay += 1
+			scanner = nil
+			this.conn = nil
+			continue
+		}
+
+		buffer := scanner.Text()
 		bufstring := string(buffer)
 		println("IN: ", bufstring)
 		command := parser.ParseLine(bufstring)
