@@ -47,6 +47,27 @@ type IrcClient struct {
 // client.
 type CommandFunc func(client *IrcClient, command *parser.IrcMessage)
 
+// This function's responsibility is to ping the IRC server every so often. This
+// way, it will be forced to PONG us, so our read deadline won't expire.
+//
+// This is required because some IRC server implementations won't PING if there
+// is other ongoing traffic (i.e. if we're writing a channel regularly).
+//
+// XXX: a potential improvement would be only sending PING in the case where we
+// haven't sent or recieved recently.
+func pinger(client *IrcClient, pingChan chan int) {
+	for {
+		timer := time.NewTimer(time.Second * 60)
+		select {
+		case <-timer.C:
+		case <-pingChan:
+			return
+		}
+
+		client.WriteLine("PING :gobo")
+	}
+}
+
 func NewClient(nick string, user string, realname string) *IrcClient {
 	client := new(IrcClient)
 	mchan := make(chan *parser.IrcMessage)
@@ -68,6 +89,14 @@ func (this *IrcClient) AddCallback(command string, callback CommandFunc) {
 func (this *IrcClient) Run(host string) {
 	var scanner *bufio.Scanner
 	var reconnDelay int
+
+	pingControlChan := make(chan int)
+	defer func() {
+		// Shut down pinger
+		pingControlChan <- 0
+	}()
+
+	go pinger(this, pingControlChan)
 
 	for {
 		for this.conn == nil {
