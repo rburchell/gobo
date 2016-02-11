@@ -164,7 +164,7 @@ func ParseLine(line string) *IrcMessage {
 		// split each tag and process seperately
 		tags := strings.Split(tagstr, ";")
 		for _, tag := range tags {
-			var eq int = strings.Index(tag, "=")
+			eq := strings.Index(tag, "=")
 			var key string
 			var tagobj IrcTag
 
@@ -187,7 +187,7 @@ func ParseLine(line string) *IrcMessage {
 			}
 
 			// finally, find the vendor prefix - if any.
-			var slash int = strings.Index(key, "/")
+			slash := strings.Index(key, "/")
 			if slash != -1 {
 				tagobj.VendorPrefix = key[0:slash]
 				tagobj.Key = key[slash+1 : len(key)]
@@ -211,8 +211,8 @@ func ParseLine(line string) *IrcMessage {
 		//
 		// therefore: if we see a ! OR we see no ., we enter this branch...
 		if strings.Contains(pfx, "!") || !strings.Contains(pfx, ".") {
-			var bang int = strings.Index(pfx, "!")
-			var at int = strings.Index(pfx, "@") //  TODO: would LastIndex be faster? maybe not, host is usually long.
+			bang := strings.Index(pfx, "!")
+			at := strings.Index(pfx, "@") //  TODO: would LastIndex be faster? maybe not, host is usually long.
 			if bang == -1 && at == -1 {
 				command.Prefix.Nick = pfx
 			} else if bang == -1 {
