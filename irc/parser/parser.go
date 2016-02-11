@@ -158,7 +158,7 @@ func ParseLine(line string) *IrcMessage {
 	if strings.HasPrefix(line, "@") {
 		var tagstr string
 		tagstr, line = splitArg(line)
-		tagstr = tagstr[1:len(tagstr)]
+		tagstr = tagstr[1:]
 
 		// aaa=bbb;ccc;example.com/ddd=eee
 		// split each tag and process seperately
@@ -177,7 +177,7 @@ func ParseLine(line string) *IrcMessage {
 				key = tag[0:eq]
 
 				// the value itself requires some string escaping.
-				vstr := tag[eq+1 : len(tag)]
+				vstr := tag[eq+1:]
 				vstr = strings.Replace(vstr, "\\:", ";", -1)
 				vstr = strings.Replace(vstr, "\\s", " ", -1)
 				vstr = strings.Replace(vstr, "\\\\", "\\", -1)
@@ -190,7 +190,7 @@ func ParseLine(line string) *IrcMessage {
 			slash := strings.Index(key, "/")
 			if slash != -1 {
 				tagobj.VendorPrefix = key[0:slash]
-				tagobj.Key = key[slash+1 : len(key)]
+				tagobj.Key = key[slash+1:]
 			} else {
 				tagobj.Key = key
 			}
@@ -203,7 +203,7 @@ func ParseLine(line string) *IrcMessage {
 	if strings.HasPrefix(line, ":") {
 		var pfx string
 		pfx, line = splitArg(line)
-		pfx = pfx[1:len(pfx)]
+		pfx = pfx[1:]
 
 		// foo!bar@moo is nick!user@host
 		// foo is nick
@@ -224,7 +224,7 @@ func ParseLine(line string) *IrcMessage {
 			} else {
 				command.Prefix.Nick = pfx[0:bang]
 				command.Prefix.User = pfx[bang+1 : at]
-				command.Prefix.Host = pfx[at+1 : len(pfx)]
+				command.Prefix.Host = pfx[at+1:]
 			}
 		} else {
 			// message from a server

@@ -181,7 +181,7 @@ func TestParse(t *testing.T) {
 		// ircv3 message-tags
 		{
 			"@aaaa :w00t TEST",
-			[]IrcTag{IrcTag{Key: "aaaa"}},
+			[]IrcTag{{Key: "aaaa"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -189,7 +189,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"@aaaa;bbb;cccc :w00t TEST",
-			[]IrcTag{IrcTag{Key: "aaaa"}, IrcTag{Key: "bbb"}, IrcTag{Key: "cccc"}},
+			[]IrcTag{{Key: "aaaa"}, {Key: "bbb"}, {Key: "cccc"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -197,7 +197,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"@aaaa=test;bbb :w00t TEST",
-			[]IrcTag{IrcTag{Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb"}},
+			[]IrcTag{{Key: "aaaa", Value: "test"}, {Key: "bbb"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -205,7 +205,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"@example.org/aaaa=test;bbb :w00t TEST",
-			[]IrcTag{IrcTag{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb"}},
+			[]IrcTag{{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, {Key: "bbb"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -213,7 +213,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"@example.org/aaaa=test;another.example.org/bbb :w00t TEST",
-			[]IrcTag{IrcTag{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, IrcTag{VendorPrefix: "another.example.org", Key: "bbb"}},
+			[]IrcTag{{VendorPrefix: "example.org", Key: "aaaa", Value: "test"}, {VendorPrefix: "another.example.org", Key: "bbb"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -221,7 +221,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"@aaaa=test;bbb=another :w00t TEST",
-			[]IrcTag{IrcTag{Key: "aaaa", Value: "test"}, IrcTag{Key: "bbb", Value: "another"}},
+			[]IrcTag{{Key: "aaaa", Value: "test"}, {Key: "bbb", Value: "another"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
@@ -230,7 +230,7 @@ func TestParse(t *testing.T) {
 		{
 			// test escaping of tag values
 			"@aaaa=magic\\:things\\s\\\\happen\\rhere\\nsometimes :w00t TEST",
-			[]IrcTag{IrcTag{Key: "aaaa", Value: "magic;things \\happen\rhere\nsometimes"}},
+			[]IrcTag{{Key: "aaaa", Value: "magic;things \\happen\rhere\nsometimes"}},
 			IrcPrefix{Nick: "w00t"},
 			"TEST",
 			[]string{},
