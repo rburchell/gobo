@@ -161,7 +161,7 @@ func ParseLine(line string) *IrcMessage {
 		tagstr = tagstr[1:]
 
 		// aaa=bbb;ccc;example.com/ddd=eee
-		// split each tag and process seperately
+		// split each tag and process separately
 		tags := strings.Split(tagstr, ";")
 		for _, tag := range tags {
 			eq := strings.Index(tag, "=")

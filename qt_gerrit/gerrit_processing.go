@@ -96,7 +96,7 @@ func handlePatchSetCreated(c *client.IrcClient, msg *GerritMessage) {
 		c.WriteMessage(gerritChannel, msg)
 	} else {
 		// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
-		// seperately since someone else updating a patch is
+		// separately since someone else updating a patch is
 		// significant
 		msg := fmt.Sprintf("[%s/%s] %s updated by %s - %s",
 			msg.Change.Project, msg.Change.Branch,
@@ -108,7 +108,7 @@ func handlePatchSetCreated(c *client.IrcClient, msg *GerritMessage) {
 
 func handleChangeMerged(c *client.IrcClient, msg *GerritMessage) {
 	// TODO: msg.Owner.Name != msg.PatchSet.Uploader.Name, note
-	// seperately since someone else updating a patch is
+	// separately since someone else updating a patch is
 	// significant
 	str := fmt.Sprintf("[%s/%s] %s authored by %s was cherry-picked by %s - %s",
 		msg.Change.Project, msg.Change.Branch,
