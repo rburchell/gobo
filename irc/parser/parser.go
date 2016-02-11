@@ -68,16 +68,16 @@ type IrcTag struct {
 func (this *IrcPrefix) String() string {
 	if len(this.Server) > 0 {
 		return this.Server
-	} else {
-		// we have two possible forms that are valid:
-		// nick
-		// nick!user@host
-		if len(this.User) > 0 {
-			return fmt.Sprintf("%s!%s@%s", this.Nick, this.User, this.Host)
-		} else {
-			return this.Nick
-		}
 	}
+
+	// we have two possible forms that are valid:
+	// nick
+	// nick!user@host
+	if len(this.User) > 0 {
+		return fmt.Sprintf("%s!%s@%s", this.Nick, this.User, this.Host)
+	}
+
+	return this.Nick
 }
 
 // IrcMessage is the primary interface for interaction with the parser. The
