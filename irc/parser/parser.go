@@ -151,7 +151,7 @@ func splitArg(line string) (arg string, rest string) {
 // It returns a usable IrcMessage struct instance.
 func ParseLine(line string) *IrcMessage {
 	// BUG(w00t): ParseLine does not currently have a way of reporting errors.
-	args := make([]string, 0)
+	args := []string{}
 	command := new(IrcMessage)
 
 	// ircv3 message tags extension
