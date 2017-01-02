@@ -148,7 +148,8 @@ func (this *IrcClient) Run(host string) {
 
 		buffer := scanner.Text()
 		bufstring := string(buffer)
-		println("IN: ", bufstring)
+		//TODO: enable logging somehow
+		//println("IN: ", bufstring)
 		command := parser.ParseLine(bufstring)
 
 		switch command.Command {
@@ -208,7 +209,8 @@ func (this *IrcClient) WriteLine(bytes string) {
 		return
 	}
 
-	println("OUT: ", bytes)
+	//TODO: enable logging somehow
+	//println("OUT: ", bytes)
 	_, err := this.conn.Write([]byte(bytes))
 	_, err2 := this.conn.Write([]byte("\r\n"))
 
