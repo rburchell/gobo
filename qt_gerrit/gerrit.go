@@ -118,6 +118,8 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 				"aes128-cbc",
 			},
 		},
+		// See https://github.com/golang/go/issues/14941 - we should enable ASAP
+		//Timeout: time.Duration(10 * time.Second),
 	}
 
 	println("Connecting...")
