@@ -187,28 +187,48 @@ func (this *GerritClient) Run() {
 
 	var bio *bufio.Reader
 	var reconnectDelay int
+
+	type ALine struct {
+		jsonBlob []byte
+		err      error
+	}
+
+	readchan := make(chan ALine)
+
 	for {
 		for this.client == nil {
 			this.client, bio = connectToGerrit(&signer, &reconnectDelay)
 		}
+		timeout := time.After(160 * time.Second)
 
-		jsonBlob, err := bio.ReadBytes('\n')
+		go func() {
+			jsonBlob, err := bio.ReadBytes('\n')
+			readchan <- ALine{jsonBlob, err}
+		}()
 
-		if err != nil {
-			println("Error reading line: " + err.Error())
+		select {
+		case <-timeout:
+			println("Timeout while reading line")
+			this.client.Close()
 			this.client = nil
-			bio = nil
 			reconnectDelay += 1
-		} else {
-			var message GerritMessage
-			err := json.Unmarshal(jsonBlob, &message)
-			message.OriginalJson = jsonBlob
-			if err != nil {
-				println("BAD JSON: " + string(jsonBlob))
-				panic("Error processing JSON! " + err.Error())
-			}
+		case lineInstance := <-readchan:
+			if lineInstance.err != nil {
+				println("Error reading line: " + lineInstance.err.Error())
+				this.client.Close()
+				this.client = nil
+				reconnectDelay += 1
+			} else {
+				var message GerritMessage
+				err := json.Unmarshal(lineInstance.jsonBlob, &message)
+				message.OriginalJson = lineInstance.jsonBlob
+				if err != nil {
+					println("BAD JSON: " + string(lineInstance.jsonBlob))
+					panic("Error processing JSON! " + err.Error())
+				}
 
-			this.MessageChannel <- &message
+				this.MessageChannel <- &message
+			}
 		}
 	}
 }
