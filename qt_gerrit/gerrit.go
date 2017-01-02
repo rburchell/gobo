@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"io/ioutil"
 	"os"
 	"time"
@@ -212,13 +213,14 @@ func (this *GerritClient) Run() {
 
 		select {
 		case <-timeout:
-			this.DiagnosticsChannel <- "Timeout while reading from Gerrit"
 			// Just close the connection. The next read will EOF, and we'll go
 			// into the error handling case below.
 			this.client.Close()
 		case lineInstance := <-readchan:
 			if lineInstance.err != nil {
-				this.DiagnosticsChannel <- "Error reading line: " + lineInstance.err.Error()
+				if lineInstance.err != io.EOF {
+					this.DiagnosticsChannel <- "Error reading line: " + lineInstance.err.Error()
+				}
 				this.client.Close()
 				this.client = nil
 				reconnectDelay += 1
