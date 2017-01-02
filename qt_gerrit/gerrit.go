@@ -159,13 +159,15 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 }
 
 type GerritClient struct {
-	MessageChannel chan *GerritMessage
-	client         *ssh.Client
+	MessageChannel     chan *GerritMessage
+	DiagnosticsChannel chan string
+	client             *ssh.Client
 }
 
 func NewClient() *GerritClient {
 	client := new(GerritClient)
 	client.MessageChannel = make(chan *GerritMessage)
+	client.DiagnosticsChannel = make(chan string)
 	return client
 }
 
@@ -208,13 +210,13 @@ func (this *GerritClient) Run() {
 
 		select {
 		case <-timeout:
-			println("Timeout while reading line")
+			this.DiagnosticsChannel <- "Timeout while reading from Gerrit"
 			this.client.Close()
 			this.client = nil
 			reconnectDelay += 1
 		case lineInstance := <-readchan:
 			if lineInstance.err != nil {
-				println("Error reading line: " + lineInstance.err.Error())
+				this.DiagnosticsChannel <- "Error reading line: " + lineInstance.err.Error()
 				this.client.Close()
 				this.client = nil
 				reconnectDelay += 1
@@ -223,8 +225,9 @@ func (this *GerritClient) Run() {
 				err := json.Unmarshal(lineInstance.jsonBlob, &message)
 				message.OriginalJson = lineInstance.jsonBlob
 				if err != nil {
+					this.DiagnosticsChannel <- "Error processing JSON: " + err.Error()
 					println("BAD JSON: " + string(lineInstance.jsonBlob))
-					panic("Error processing JSON! " + err.Error())
+					continue
 				}
 
 				this.MessageChannel <- &message

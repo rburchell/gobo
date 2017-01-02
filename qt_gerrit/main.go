@@ -228,6 +228,9 @@ func main() {
 		select {
 		case command := <-c.CommandChannel:
 			c.ProcessCallbacks(command)
+		case msg := <-gc.DiagnosticsChannel:
+			str := fmt.Sprintf("[DIAGNOSTICS] %s", msg)
+			c.WriteMessage(gerritChannel, str)
 		case msg := <-gc.MessageChannel:
 			if msg.Type == "comment-added" {
 				handleCommentAdded(c, msg)
