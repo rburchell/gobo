@@ -195,25 +195,27 @@ func (this *GerritClient) Run() {
 		err      error
 	}
 
-	readchan := make(chan ALine)
-
 	for {
 		for this.client == nil {
 			this.client, bio = connectToGerrit(&signer, &reconnectDelay)
 		}
 		timeout := time.After(160 * time.Second)
+		readchan := make(chan ALine)
 
-		go func() {
+		// be careful, we don't do any locking here.
+		// this is safe right now as we wait for a channel response before doing
+		// anything, but... bad smell
+		go func(bio *bufio.Reader) {
 			jsonBlob, err := bio.ReadBytes('\n')
 			readchan <- ALine{jsonBlob, err}
-		}()
+		}(bio)
 
 		select {
 		case <-timeout:
 			this.DiagnosticsChannel <- "Timeout while reading from Gerrit"
+			// Just close the connection. The next read will EOF, and we'll go
+			// into the error handling case below.
 			this.client.Close()
-			this.client = nil
-			reconnectDelay += 1
 		case lineInstance := <-readchan:
 			if lineInstance.err != nil {
 				this.DiagnosticsChannel <- "Error reading line: " + lineInstance.err.Error()
