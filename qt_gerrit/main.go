@@ -88,7 +88,7 @@ func main() {
 
 		go func() {
 			hclient := http.Client{
-				Timeout: time.Duration(4 * time.Second),
+				Timeout: time.Duration(10 * time.Second),
 			}
 
 			for _, bugId := range bugs {
@@ -142,7 +142,7 @@ func main() {
 
 		go func() {
 			hclient := http.Client{
-				Timeout: time.Duration(4 * time.Second),
+				Timeout: time.Duration(10 * time.Second),
 			}
 
 			for _, changeId := range changes {
