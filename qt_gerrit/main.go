@@ -30,6 +30,7 @@ import (
 	"github.com/rburchell/gobo/irc/parser"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -64,6 +65,25 @@ func main() {
 		}
 
 		go handleGerritWebApi(c, command.Parameters[0], directTo, changes)
+
+		// map a repository to owner -> repo so Github's API can compute
+		// feel free to add additional related entries.
+		githubWhitelist := map[string]string{
+			"qtbase":        "qt/qtbase",
+			"qtdeclarative": "qt/qtdeclarative",
+		}
+
+		keys := make([]string, len(githubWhitelist))
+		i := 0
+		for k := range githubWhitelist {
+			keys[i] = k
+			i++
+		}
+
+		commitre := regexp.MustCompile(`(` + strings.Join(keys, "|") + `)\/([0-9a-f]+)`)
+		commitz := commitre.FindAllStringSubmatch(command.Parameters[1], -1)
+
+		go handleGithubWebApi(c, command.Parameters[0], directTo, githubWhitelist, commitz)
 	})
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
