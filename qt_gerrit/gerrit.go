@@ -27,9 +27,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"golang.org/x/crypto/ssh"
-	"io"
 	"io/ioutil"
 	"os"
 	"time"
@@ -86,22 +84,8 @@ type GerritMessage struct {
 	OriginalJson []byte
 }
 
-func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *bufio.Reader) {
-	// we use > 1 as a cheap trick here, we allow ourselves one
-	// disconnect (by EOF) before we start delaying reconnection
-	// attempts.
-	//
-	// this can (and probably should) be done in a more obvious fashion.
-	if *reconnectDelay > 1 {
-		if *reconnectDelay > 60 {
-			*reconnectDelay = 60
-		}
-
-		fmt.Printf("Delaying reconnection attempt by %d seconds\n", *reconnectDelay)
-		timer := time.NewTimer(time.Second * time.Duration(*reconnectDelay))
-		<-timer.C
-	}
-
+// Connect to Gerrit (and keep trying until we succeed).
+func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *bufio.Reader) {
 	gerritUser := os.Getenv("GERRIT_USER")
 	if len(gerritUser) == 0 {
 		panic("Must provide GERRIT_USER environment variable.")
@@ -119,44 +103,40 @@ func connectToGerrit(signer *ssh.Signer, reconnectDelay *int) (*ssh.Client, *buf
 				"aes128-cbc",
 			},
 		},
-		// See https://github.com/golang/go/issues/14941 - we should enable ASAP
-		//Timeout: time.Duration(10 * time.Second),
 	}
 
-	println("Connecting...")
-	client, err := ssh.Dial("tcp", "codereview.qt-project.org:29418", config)
-	// TODO: implement deadlines
-	if err != nil {
-		println("Failed to dial: " + err.Error())
-		*reconnectDelay += 4 // something is probably wrong with the server.
-		return nil, nil
-	}
+	for {
+		println("Connecting...")
+		client, err := SSHDialTimeout("tcp", "codereview.qt-project.org:29418", config, time.Second*10)
+		if err != nil {
+			this.DiagnosticsChannel <- "Failed to dial: " + err.Error()
+			time.Sleep(10)
+			continue
+		}
 
-	session, err := client.NewSession()
-	if err != nil {
-		println("fail to create session:" + err.Error())
-		*reconnectDelay += 4
-		return nil, nil
-	}
-	//defer session.Close()
+		session, err := client.NewSession()
+		if err != nil {
+			this.DiagnosticsChannel <- "Failed to create session:" + err.Error()
+			time.Sleep(10)
+			continue
+		}
 
-	stdout, err := session.StdoutPipe()
-	if err != nil {
-		println("Failed to get stdout pipe: " + err.Error())
-		*reconnectDelay += 4
-		return nil, nil
-	}
+		stdout, err := session.StdoutPipe()
+		if err != nil {
+			this.DiagnosticsChannel <- "Failed to get stdout pipe: " + err.Error()
+			time.Sleep(10)
+			continue
+		}
 
-	bio := bufio.NewReader(stdout)
-	if err := session.Start("gerrit stream-events"); err != nil {
-		println("fail to run " + err.Error())
-		*reconnectDelay += 10 // uh oh.
-		return nil, nil
-	} else {
-		*reconnectDelay = 0
+		bio := bufio.NewReader(stdout)
+		if err := session.Start("gerrit stream-events"); err != nil {
+			this.DiagnosticsChannel <- "Failed to stream: " + err.Error()
+			time.Sleep(10)
+			continue
+		} else {
+			return client, bio
+		}
 	}
-
-	return client, bio
 }
 
 type GerritClient struct {
@@ -189,53 +169,27 @@ func (this *GerritClient) Run() {
 	}
 
 	var bio *bufio.Reader
-	var reconnectDelay int
-
-	type ALine struct {
-		jsonBlob []byte
-		err      error
-	}
 
 	for {
-		for this.client == nil {
-			this.client, bio = connectToGerrit(&signer, &reconnectDelay)
-		}
-		timeout := time.After(160 * time.Second)
-		readchan := make(chan ALine)
+		this.client, bio = this.connectToGerrit(&signer)
 
-		// be careful, we don't do any locking here.
-		// this is safe right now as we wait for a channel response before doing
-		// anything, but... bad smell
-		go func(bio *bufio.Reader) {
-			jsonBlob, err := bio.ReadBytes('\n')
-			readchan <- ALine{jsonBlob, err}
-		}(bio)
-
-		select {
-		case <-timeout:
-			// Just close the connection. The next read will EOF, and we'll go
-			// into the error handling case below.
+		jsonBlob, err := bio.ReadBytes('\n')
+		if err != nil {
+			this.DiagnosticsChannel <- "Error reading line: " + err.Error()
 			this.client.Close()
-		case lineInstance := <-readchan:
-			if lineInstance.err != nil {
-				if lineInstance.err != io.EOF {
-					this.DiagnosticsChannel <- "Error reading line: " + lineInstance.err.Error()
-				}
-				this.client.Close()
-				this.client = nil
-				reconnectDelay += 1
-			} else {
-				var message GerritMessage
-				err := json.Unmarshal(lineInstance.jsonBlob, &message)
-				message.OriginalJson = lineInstance.jsonBlob
-				if err != nil {
-					this.DiagnosticsChannel <- "Error processing JSON: " + err.Error()
-					println("BAD JSON: " + string(lineInstance.jsonBlob))
-					continue
-				}
-
-				this.MessageChannel <- &message
-			}
+			this.client = nil
+			continue // go reconnect, via connectToGerrit
 		}
+
+		var message GerritMessage
+		err = json.Unmarshal(jsonBlob, &message)
+		message.OriginalJson = jsonBlob
+		if err != nil {
+			this.DiagnosticsChannel <- "Error processing JSON: " + err.Error()
+			println("BAD JSON: " + string(jsonBlob))
+			continue
+		}
+
+		this.MessageChannel <- &message
 	}
 }
