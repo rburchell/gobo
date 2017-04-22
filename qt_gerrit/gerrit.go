@@ -107,7 +107,7 @@ func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *buf
 
 	for {
 		println("Connecting...")
-		client, err := SSHDialTimeout("tcp", "codereview.qt-project.org:29418", config, time.Second*10)
+		client, err := SSHDialTimeout("tcp", "codereview.qt-project.org:29418", config, time.Second*10, time.Hour*5, time.Second*20)
 		if err != nil {
 			this.DiagnosticsChannel <- "Failed to dial: " + err.Error()
 			time.Sleep(10)

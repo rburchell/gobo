@@ -32,13 +32,13 @@ func (c *Conn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 
-func SSHDialTimeout(network, addr string, config *ssh.ClientConfig, timeout time.Duration) (*ssh.Client, error) {
-	conn, err := net.DialTimeout(network, addr, timeout)
+func SSHDialTimeout(network, addr string, config *ssh.ClientConfig, connectTimeout time.Duration, readTimeout time.Duration, writeTimeout time.Duration) (*ssh.Client, error) {
+	conn, err := net.DialTimeout(network, addr, connectTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	timeoutConn := &Conn{conn, timeout, timeout}
+	timeoutConn := &Conn{conn, readTimeout, writeTimeout}
 	c, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
 		return nil, err
