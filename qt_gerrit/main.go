@@ -232,6 +232,7 @@ func main() {
 			str := fmt.Sprintf("[DIAGNOSTICS] %s", msg)
 			c.WriteMessage(gerritChannel, str)
 		case msg := <-gc.MessageChannel:
+			time.Sleep(1) // poor man's throttling so Gerrit doesn't flood us off
 			if msg.Type == "comment-added" {
 				handleCommentAdded(c, msg)
 			} else if msg.Type == "patchset-created" {
