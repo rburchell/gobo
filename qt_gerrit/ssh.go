@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"golang.org/x/crypto/ssh"
 	"net"
 	"time"
@@ -53,8 +52,6 @@ func SSHDialTimeout(network, addr string, config *ssh.ClientConfig, timeout time
 			<-t.C
 			_, _, err := client.Conn.SendRequest("keepalive@qt_gerrit_bot", true, nil)
 			if err != nil {
-				fmt.Printf("Keepalive SSH failed: " + err.Error())
-				client.Close()
 				return
 			}
 		}
