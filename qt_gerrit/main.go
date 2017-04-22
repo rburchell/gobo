@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Robin Burchell <robin+git@viroteck.net>
+ * Copyright (C) 2015-2017 Robin Burchell <robin+git@viroteck.net>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -25,48 +25,13 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/rburchell/gobo/irc/client"
 	"github.com/rburchell/gobo/irc/parser"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"regexp"
 	"time"
 )
-
-type GerritChange struct {
-	Kind      string `json:"kind"`
-	Id        string `json:"id"`
-	Project   string `json:"project"`
-	Branch    string `json:"branch"`
-	ChangeId  string `json:"change_id"`
-	Subject   string `json:"subject"`
-	Status    string `json:"status"`
-	Created   string `json:"created"`
-	Updated   string `json:"updated"`
-	Mergeable bool   `json:"mergeable"`
-	SortKey   string `json:"_sortkey"`
-	Number    int    `json:"_number"`
-	Owner     struct {
-		Name string `json:"name"`
-	} `json:"owner"`
-}
-
-// TODO: utterly incomplete, because this is a big response and we only care about a
-// small fraction of it right now.
-type JiraBug struct {
-	Fields struct {
-		Summary string `json:"summary"`
-		Status  struct {
-			Name string `json:"name"`
-		} `json:"status"`
-	} `json:"fields"`
-
-	ErrorMessages []string `json:"errorMessages"`
-}
 
 func main() {
 	// TODO: move all env var checks here.
@@ -86,49 +51,7 @@ func main() {
 		br := regexp.MustCompile(`\b(Q[A-Z]+-[0-9]+)\b`)
 		bugs := br.FindAllString(command.Parameters[1], -1)
 
-		go func() {
-			hclient := http.Client{
-				Timeout: time.Duration(10 * time.Second),
-			}
-
-			for _, bugId := range bugs {
-				res, err := hclient.Get("https://bugreports.qt.io/rest/api/2/issue/" + bugId)
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bugId, err.Error()))
-					continue
-				}
-
-				jsonBlob, err := ioutil.ReadAll(res.Body)
-				res.Body.Close()
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bugId, err.Error()))
-					continue
-				}
-
-				var bug JiraBug
-				err = json.Unmarshal(jsonBlob, &bug)
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bugId, err.Error()))
-					continue
-				}
-
-				if len(bug.ErrorMessages) > 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: %s", bugId, bug.ErrorMessages[0]))
-					continue
-				}
-
-				if len(bug.Fields.Summary) == 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving bug %s: malformed reply", bugId))
-					continue
-				}
-
-				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s%s - https://bugreports.qt.io/browse/%s (%s)",
-					directTo,
-					bug.Fields.Summary,
-					bugId,
-					bug.Fields.Status.Name))
-			}
-		}()
+		go handleJiraWebApi(c, command.Parameters[0], directTo, bugs)
 
 		cr := regexp.MustCompile(`(I[0-9a-f]{40})`)
 		changes := cr.FindAllString(command.Parameters[1], -1)
@@ -140,56 +63,7 @@ func main() {
 			changes = append(changes, change[1])
 		}
 
-		go func() {
-			hclient := http.Client{
-				Timeout: time.Duration(10 * time.Second),
-			}
-
-			for _, changeId := range changes {
-				res, err := hclient.Get("https://codereview.qt-project.org/changes/" + changeId)
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", changeId, err.Error()))
-					continue
-				}
-
-				jsonBlob, err := ioutil.ReadAll(res.Body)
-				res.Body.Close()
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while reading response): %s", changeId, err.Error()))
-					continue
-				}
-
-				// From the Gerrit documentation:
-				// To prevent against Cross Site Script Inclusion (XSSI) attacks, the JSON
-				// response body starts with a magic prefix line that must be stripped before
-				// feeding the rest of the response body to a JSON parser:
-				//    )]}'
-				//    [ ... valid JSON ... ]
-				if !bytes.HasPrefix(jsonBlob, []byte(")]}'\n")) {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", changeId))
-					continue
-				}
-
-				// strip off the gerrit magic
-				jsonBlob = jsonBlob[5:]
-
-				var change GerritChange
-				err = json.Unmarshal(jsonBlob, &change)
-				if err != nil {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", changeId, err.Error()))
-					continue
-				}
-
-				if len(change.Id) == 0 {
-					c.WriteMessage(command.Parameters[0], fmt.Sprintf("Error retrieving change %s: malformed reply", changeId))
-					continue
-				}
-
-				c.WriteMessage(command.Parameters[0], fmt.Sprintf("%s[%s/%s] %s from %s - %s (%s)",
-					directTo, change.Project, change.Branch, change.Subject, change.Owner.Name,
-					fmt.Sprintf("https://codereview.qt-project.org/%d", change.Number), change.Status))
-			}
-		}()
+		go handleGerritWebApi(c, command.Parameters[0], directTo, changes)
 	})
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
