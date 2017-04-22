@@ -133,7 +133,7 @@ func main() {
 		cr := regexp.MustCompile(`(I[0-9a-f]{40})`)
 		changes := cr.FindAllString(command.Parameters[1], -1)
 
-		cr2 := regexp.MustCompile(`https:\/\/codereview\.qt\-project\.org\/\#\/c\/([0-9]+)\/`)
+		cr2 := regexp.MustCompile(`https:\/\/codereview\.qt\-project\.org\/(?:\#\/c\/)?([0-9]+|[0-9]+)\/?`)
 		changes2 := cr2.FindAllStringSubmatch(command.Parameters[1], -1)
 
 		for _, change := range changes2 {
