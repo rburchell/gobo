@@ -105,8 +105,9 @@ func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *buf
 		},
 	}
 
+	this.DiagnosticsChannel <- "Attempting to connect to Gerrit"
+
 	for {
-		println("Connecting...")
 		client, err := SSHDialTimeout("tcp", "codereview.qt-project.org:29418", config, time.Second*10, time.Hour*5, time.Second*20)
 		if err != nil {
 			this.DiagnosticsChannel <- "Failed to dial: " + err.Error()
@@ -134,6 +135,7 @@ func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *buf
 			time.Sleep(10)
 			continue
 		} else {
+			this.DiagnosticsChannel <- "Gerrit connection reestablished."
 			return client, bio
 		}
 	}
