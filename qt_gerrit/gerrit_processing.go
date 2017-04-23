@@ -127,3 +127,16 @@ func handleMergeFailed(c *client.IrcClient, msg *GerritMessage) {
 		reason, msg.Change.Url)
 	c.WriteMessage(gerritChannel, str)
 }
+
+// ### It would be nice if we could actually describe *what* changed.
+func handleRefUpdate(resultsChannel chan string, m *GerritMessage) {
+	defer func() { close(resultsChannel) }()
+
+	// These are handled by handleChangeMerged
+	if strings.HasPrefix(m.RefUpdate.RefName, "refs/staging/") {
+		return
+	}
+
+	url := "https://code.qt.io/cgit/" + m.RefUpdate.Project + ".git/diff/?id=" + m.RefUpdate.OldRev + "&id2=" + m.RefUpdate.NewRev
+	resultsChannel <- fmt.Sprintf("[%s/%s] updated from %s to %s - %s", m.RefUpdate.Project, m.RefUpdate.RefName, m.RefUpdate.OldRev, m.RefUpdate.NewRev, url)
+}

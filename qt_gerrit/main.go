@@ -146,7 +146,9 @@ func main() {
 			} else if msg.Type == "reviewer-added" {
 				// ignore, too spammy
 			} else if msg.Type == "ref-updated" {
-				// ignore, too spammy
+				refUpdateChan := make(chan string)
+				go handleRefUpdate(refUpdateChan, msg)
+				go messageDrainer(c, gerritChannel, refUpdateChan)
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}

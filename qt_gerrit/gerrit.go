@@ -71,7 +71,7 @@ type GerritMessage struct {
 
 	// used in ref-updated
 	Submitter GerritPerson    `json:"submitter"`
-	RefUpdate GerritRefUpdate `json:"refname"`
+	RefUpdate GerritRefUpdate `json:"refUpdate"`
 
 	// used in merge-failed
 	Reason string `json:"reason"`
