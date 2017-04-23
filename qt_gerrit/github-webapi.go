@@ -34,21 +34,47 @@ import (
 	"time"
 )
 
+type GithubCommitMetadata struct {
+	Author struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Date  string `json:"date"`
+	} `json:"author"`
+	Committer struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Date  string `json:"date"`
+	} `json:"committer"`
+	Message string `json:"message"`
+}
+
+func (this *GithubCommitMetadata) Summary() string {
+	idx := strings.Index(this.Message, "\n")
+	if idx < 0 {
+		idx = len(this.Message)
+	}
+	return this.Message[0:idx]
+}
+
 type GithubCommit struct {
+	Sha     string               `json:"sha"`
+	Commit  GithubCommitMetadata `json:"commit"`
+	HtmlUrl string               `json:"html_url"`
+}
+
+// https://api.github.com/repos/<owner>/<repo>/commits/<sha>
+type GithubCommitResponse struct {
+	HtmlUrl string               `json:"html_url"`
+	Commit  GithubCommitMetadata `json:"commit"`
+}
+
+// https://api.github.com/repos/<owner>/<repo>/compare/<refspec>
+type GithubCompareResponse struct {
 	HtmlUrl string `json:"html_url"`
-	Commit  struct {
-		Author struct {
-			Name  string `json:"name"`
-			Email string `json:"email"`
-			Date  string `json:"date"`
-		} `json:"author"`
-		Committer struct {
-			Name  string `json:"name"`
-			Email string `json:"email"`
-			Date  string `json:"date"`
-		} `json:"committer"`
-		Message string `json:"message"`
-	} `json:"commit"`
+
+	AheadBy  int            `json:"ahead_by"`
+	BehindBy int            `json:"behind_by"`
+	Commits  []GithubCommit `json:"commits"`
 }
 
 func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, repoMap map[string]string, commitz [][]string) {
@@ -84,7 +110,7 @@ func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, rep
 			continue
 		}
 
-		var commit GithubCommit
+		var commit GithubCommitResponse
 		err = json.Unmarshal(jsonBlob, &commit)
 		if err != nil {
 			c.WriteMessage(origin, fmt.Sprintf("Error retrieving commit %s from repository %s (while parsing JSON): %s", sha, repo, err.Error()))
