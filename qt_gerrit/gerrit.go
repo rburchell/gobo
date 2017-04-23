@@ -171,7 +171,9 @@ func (this *GerritClient) Run() {
 	var bio *bufio.Reader
 
 	for {
-		this.client, bio = this.connectToGerrit(&signer)
+		if this.client == nil {
+			this.client, bio = this.connectToGerrit(&signer)
+		}
 
 		jsonBlob, err := bio.ReadBytes('\n')
 		if err != nil {
