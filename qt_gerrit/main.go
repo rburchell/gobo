@@ -66,16 +66,14 @@ func main() {
 
 		go handleGerritWebApi(c, command.Parameters[0], directTo, changes)
 
-		// map a repository to owner -> repo so Github's API can compute
-		// feel free to add additional related entries.
-		githubWhitelist := map[string]string{
+		repoNameToGithubMap := map[string]string{
 			"qtbase":        "qt/qtbase",
 			"qtdeclarative": "qt/qtdeclarative",
 		}
 
-		keys := make([]string, len(githubWhitelist))
+		keys := make([]string, len(repoNameToGithubMap))
 		i := 0
-		for k := range githubWhitelist {
+		for k := range repoNameToGithubMap {
 			keys[i] = k
 			i++
 		}
@@ -83,7 +81,7 @@ func main() {
 		commitre := regexp.MustCompile(`(` + strings.Join(keys, "|") + `)\/([0-9a-f]+)`)
 		commitz := commitre.FindAllStringSubmatch(command.Parameters[1], -1)
 
-		go handleGithubWebApi(c, command.Parameters[0], directTo, githubWhitelist, commitz)
+		go handleGithubWebApi(c, command.Parameters[0], directTo, commitz)
 	})
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {

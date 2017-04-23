@@ -77,7 +77,7 @@ type GithubCompareResponse struct {
 	Commits  []GithubCommit `json:"commits"`
 }
 
-func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, repoMap map[string]string, commitz [][]string) {
+func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, commitz [][]string) {
 	hclient := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
@@ -91,7 +91,7 @@ func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, rep
 
 		var githubLookup string
 		var ok bool
-		if githubLookup, ok = repoMap[repo]; !ok {
+		if githubLookup, ok = repoNameToGithubMap[repo]; !ok {
 			// sorry, not found. alter githubWhitelist.
 			c.WriteMessage(origin, fmt.Sprintf("I don't know where to find commit %s in repository %s", sha, repo))
 			continue
