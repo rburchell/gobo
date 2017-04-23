@@ -138,5 +138,5 @@ func handleRefUpdate(resultsChannel chan string, m *GerritMessage) {
 	}
 
 	url := "https://code.qt.io/cgit/" + m.RefUpdate.Project + ".git/log/?qt=range&q=" + m.RefUpdate.OldRev + "..." + m.RefUpdate.NewRev
-	resultsChannel <- fmt.Sprintf("[%s/%s] updated from %s to %s - %s", m.RefUpdate.Project, m.RefUpdate.RefName, m.RefUpdate.OldRev, m.RefUpdate.NewRev, url)
+	resultsChannel <- fmt.Sprintf("[%s] %s updated %s from %s to %s - %s", m.RefUpdate.Project, m.Submitter.Name, m.RefUpdate.RefName, m.RefUpdate.OldRev, m.RefUpdate.NewRev, url)
 }
