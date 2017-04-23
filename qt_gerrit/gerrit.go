@@ -113,28 +113,28 @@ func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *buf
 		client, err := SSHDialTimeout("tcp", "codereview.qt-project.org:29418", config, time.Second*10, time.Hour*5, time.Second*20)
 		if err != nil {
 			this.DiagnosticsChannel <- "Failed to dial: " + err.Error()
-			time.Sleep(10)
+			time.Sleep(10 * time.Second)
 			continue
 		}
 
 		session, err := client.NewSession()
 		if err != nil {
 			this.DiagnosticsChannel <- "Failed to create session:" + err.Error()
-			time.Sleep(10)
+			time.Sleep(10 * time.Second)
 			continue
 		}
 
 		stdout, err := session.StdoutPipe()
 		if err != nil {
 			this.DiagnosticsChannel <- "Failed to get stdout pipe: " + err.Error()
-			time.Sleep(10)
+			time.Sleep(10 * time.Second)
 			continue
 		}
 
 		bio := bufio.NewReader(stdout)
 		if err := session.Start("gerrit stream-events"); err != nil {
 			this.DiagnosticsChannel <- "Failed to stream: " + err.Error()
-			time.Sleep(10)
+			time.Sleep(10 * time.Second)
 			continue
 		} else {
 			this.DiagnosticsChannel <- "Gerrit connection reestablished."
