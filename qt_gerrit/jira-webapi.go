@@ -27,7 +27,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rburchell/gobo/irc/client"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -46,7 +45,9 @@ type JiraBug struct {
 	ErrorMessages []string `json:"errorMessages"`
 }
 
-func handleJiraWebApi(c *client.IrcClient, origin string, directTo string, bugs []string) {
+func handleJiraWebApi(resultsChannel chan string, directTo string, bugs []string) {
+	defer func() { close(resultsChannel) }()
+
 	hclient := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
@@ -54,38 +55,38 @@ func handleJiraWebApi(c *client.IrcClient, origin string, directTo string, bugs 
 	for _, bugId := range bugs {
 		res, err := hclient.Get("https://bugreports.qt.io/rest/api/2/issue/" + bugId)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bugId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving bug %s (while fetching HTTP): %s", bugId, err.Error())
 			continue
 		}
 
 		jsonBlob, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bugId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving bug %s (while reading response): %s", bugId, err.Error())
 			continue
 		}
 
 		var bug JiraBug
 		err = json.Unmarshal(jsonBlob, &bug)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bugId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving bug %s (while parsing JSON): %s", bugId, err.Error())
 			continue
 		}
 
 		if len(bug.ErrorMessages) > 0 {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving bug %s: %s", bugId, bug.ErrorMessages[0]))
+			resultsChannel <- fmt.Sprintf("Error retrieving bug %s: %s", bugId, bug.ErrorMessages[0])
 			continue
 		}
 
 		if len(bug.Fields.Summary) == 0 {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving bug %s: malformed reply", bugId))
+			resultsChannel <- fmt.Sprintf("Error retrieving bug %s: malformed reply", bugId)
 			continue
 		}
 
-		c.WriteMessage(origin, fmt.Sprintf("%s%s - https://bugreports.qt.io/browse/%s (%s)",
+		resultsChannel <- fmt.Sprintf("%s%s - https://bugreports.qt.io/browse/%s (%s)",
 			directTo,
 			bug.Fields.Summary,
 			bugId,
-			bug.Fields.Status.Name))
+			bug.Fields.Status.Name)
 	}
 }

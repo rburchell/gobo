@@ -28,7 +28,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/rburchell/gobo/irc/client"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -52,7 +51,9 @@ type GerritChange struct {
 	} `json:"owner"`
 }
 
-func handleGerritWebApi(c *client.IrcClient, origin string, directTo string, changes []string) {
+func handleGerritWebApi(resultsChannel chan string, directTo string, changes []string) {
+	defer func() { close(resultsChannel) }()
+
 	hclient := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
@@ -60,14 +61,14 @@ func handleGerritWebApi(c *client.IrcClient, origin string, directTo string, cha
 	for _, changeId := range changes {
 		res, err := hclient.Get("https://codereview.qt-project.org/changes/" + changeId)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", changeId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving change %s (while fetching HTTP): %s", changeId, err.Error())
 			continue
 		}
 
 		jsonBlob, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving change %s (while reading response): %s", changeId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving change %s (while reading response): %s", changeId, err.Error())
 			continue
 		}
 
@@ -78,7 +79,7 @@ func handleGerritWebApi(c *client.IrcClient, origin string, directTo string, cha
 		//    )]}'
 		//    [ ... valid JSON ... ]
 		if !bytes.HasPrefix(jsonBlob, []byte(")]}'\n")) {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", changeId))
+			resultsChannel <- fmt.Sprintf("Error retrieving change %s (couldn't find Gerrit magic)", changeId)
 			continue
 		}
 
@@ -88,17 +89,17 @@ func handleGerritWebApi(c *client.IrcClient, origin string, directTo string, cha
 		var change GerritChange
 		err = json.Unmarshal(jsonBlob, &change)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", changeId, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving change %s (while parsing JSON): %s", changeId, err.Error())
 			continue
 		}
 
 		if len(change.Id) == 0 {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving change %s: malformed reply", changeId))
+			resultsChannel <- fmt.Sprintf("Error retrieving change %s: malformed reply", changeId)
 			continue
 		}
 
-		c.WriteMessage(origin, fmt.Sprintf("%s[%s/%s] %s from %s - %s (%s)",
+		resultsChannel <- fmt.Sprintf("%s[%s/%s] %s from %s - %s (%s)",
 			directTo, change.Project, change.Branch, change.Subject, change.Owner.Name,
-			fmt.Sprintf("https://codereview.qt-project.org/%d", change.Number), change.Status))
+			fmt.Sprintf("https://codereview.qt-project.org/%d", change.Number), change.Status)
 	}
 }

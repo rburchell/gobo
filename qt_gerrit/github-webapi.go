@@ -27,7 +27,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rburchell/gobo/irc/client"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -77,7 +76,9 @@ type GithubCompareResponse struct {
 	Commits  []GithubCommit `json:"commits"`
 }
 
-func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, commitz [][]string) {
+func handleGithubWebApi(resultsChannel chan string, directTo string, commitz [][]string) {
+	defer func() { close(resultsChannel) }()
+
 	hclient := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
@@ -93,27 +94,27 @@ func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, com
 		var ok bool
 		if githubLookup, ok = repoNameToGithubMap[repo]; !ok {
 			// sorry, not found. alter githubWhitelist.
-			c.WriteMessage(origin, fmt.Sprintf("I don't know where to find commit %s in repository %s", sha, repo))
+			resultsChannel <- fmt.Sprintf("I don't know where to find commit %s in repository %s", sha, repo)
 			continue
 		}
 
 		res, err := hclient.Get("https://api.github.com/repos/" + githubLookup + "/commits/" + sha)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving commit %s from repository %s (while fetching HTTP): %s", sha, repo, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving commit %s from repository %s (while fetching HTTP): %s", sha, repo, err.Error())
 			continue
 		}
 
 		jsonBlob, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving commit %s from repository %s (while reading response): %s", sha, repo, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving commit %s from repository %s (while reading response): %s", sha, repo, err.Error())
 			continue
 		}
 
 		var commit GithubCommitResponse
 		err = json.Unmarshal(jsonBlob, &commit)
 		if err != nil {
-			c.WriteMessage(origin, fmt.Sprintf("Error retrieving commit %s from repository %s (while parsing JSON): %s", sha, repo, err.Error()))
+			resultsChannel <- fmt.Sprintf("Error retrieving commit %s from repository %s (while parsing JSON): %s", sha, repo, err.Error())
 			continue
 		}
 
@@ -123,8 +124,8 @@ func handleGithubWebApi(c *client.IrcClient, origin string, directTo string, com
 		}
 		summary := commit.Commit.Message[0:idx]
 
-		c.WriteMessage(origin, fmt.Sprintf("%s[%s] %s from %s - %s",
+		resultsChannel <- fmt.Sprintf("%s[%s] %s from %s - %s",
 			directTo, repo, summary, commit.Commit.Author.Name,
-			commit.HtmlUrl))
+			commit.HtmlUrl)
 	}
 }

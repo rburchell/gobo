@@ -15,3 +15,14 @@ var repoNameToGithubMap = map[string]string{
 	"qtbase":        "qt/qtbase",
 	"qtdeclarative": "qt/qtdeclarative",
 }
+
+var validBareRepoNames []string
+
+func init() {
+	validBareRepoNames = make([]string, len(repoNameToGithubMap))
+	i := 0
+	for k := range repoNameToGithubMap {
+		validBareRepoNames[i] = k
+		i++
+	}
+}

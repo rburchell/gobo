@@ -34,6 +34,19 @@ import (
 	"time"
 )
 
+func messageDrainer(c *client.IrcClient, origin string, messageChan chan string) {
+	for {
+		select {
+		case msg := <-messageChan:
+			if len(msg) == 0 {
+				return
+			}
+
+			c.WriteMessage(origin, msg)
+		}
+	}
+}
+
 func main() {
 	// TODO: move all env var checks here.
 	if len(gerritChannel) == 0 {
@@ -49,11 +62,15 @@ func main() {
 			directTo = command.Prefix.Nick + ": " // if not, default to sender of the message
 		}
 
+		// Jira
 		br := regexp.MustCompile(`\b(Q[A-Z]+-[0-9]+)\b`)
 		bugs := br.FindAllString(command.Parameters[1], -1)
 
-		go handleJiraWebApi(c, command.Parameters[0], directTo, bugs)
+		jiraChan := make(chan string)
+		go handleJiraWebApi(jiraChan, directTo, bugs)
+		go messageDrainer(c, command.Parameters[0], jiraChan)
 
+		// Gerrit
 		cr := regexp.MustCompile(`(I[0-9a-f]{40})`)
 		changes := cr.FindAllString(command.Parameters[1], -1)
 
@@ -64,24 +81,17 @@ func main() {
 			changes = append(changes, change[1])
 		}
 
-		go handleGerritWebApi(c, command.Parameters[0], directTo, changes)
+		gerritChan := make(chan string)
+		go handleGerritWebApi(gerritChan, directTo, changes)
+		go messageDrainer(c, command.Parameters[0], gerritChan)
 
-		repoNameToGithubMap := map[string]string{
-			"qtbase":        "qt/qtbase",
-			"qtdeclarative": "qt/qtdeclarative",
-		}
-
-		keys := make([]string, len(repoNameToGithubMap))
-		i := 0
-		for k := range repoNameToGithubMap {
-			keys[i] = k
-			i++
-		}
-
-		commitre := regexp.MustCompile(`(` + strings.Join(keys, "|") + `)\/([0-9a-f]+)`)
+		// Github
+		commitre := regexp.MustCompile(`(` + strings.Join(validBareRepoNames, "|") + `)\/([0-9a-f]+)`)
 		commitz := commitre.FindAllStringSubmatch(command.Parameters[1], -1)
 
-		go handleGithubWebApi(c, command.Parameters[0], directTo, commitz)
+		ghChan := make(chan string)
+		go handleGithubWebApi(ghChan, directTo, commitz)
+		go messageDrainer(c, command.Parameters[0], ghChan)
 	})
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
