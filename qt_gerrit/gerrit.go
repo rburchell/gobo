@@ -70,18 +70,20 @@ type GerritMessage struct {
 	Comment string `json:"comment"`
 
 	// used in ref-updated
-	Submitter GerritPerson `json:"submitter"`
-	RefUpdate struct {
-		OldRev  string `json:"oldRev"`
-		NewRev  string `json:"newRev"`
-		RefName string `json:"refName"`
-		Project string `json:"project"`
-	} `json:"refname"`
+	Submitter GerritPerson    `json:"submitter"`
+	RefUpdate GerritRefUpdate `json:"refname"`
 
 	// used in merge-failed
 	Reason string `json:"reason"`
 
 	OriginalJson []byte
+}
+
+type GerritRefUpdate struct {
+	OldRev  string `json:"oldRev"`
+	NewRev  string `json:"newRev"`
+	RefName string `json:"refName"`
+	Project string `json:"project"`
 }
 
 // Connect to Gerrit (and keep trying until we succeed).
