@@ -151,6 +151,8 @@ func main() {
 				go messageDrainer(c, gerritChannel, refUpdateChan)
 			} else if msg.Type == "change-abandoned" {
 				handleChangeAbandoned(c, msg)
+			} else if msg.Type == "change-deferred" {
+				handleChangeDeferred(c, msg)
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}

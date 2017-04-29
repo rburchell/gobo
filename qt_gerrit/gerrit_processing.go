@@ -118,6 +118,18 @@ func handleChangeMerged(c *client.IrcClient, msg *GerritMessage) {
 	c.WriteMessage(gerritChannel, str)
 }
 
+func handleChangeDeferred(c *client.IrcClient, msg *GerritMessage) {
+	// TODO: msg.Owner.Name != msg.Deferrer.Name, note
+	// separately since someone else updating a patch is
+	// significant
+	str := fmt.Sprintf("[%s/%s] %s owned by %s was deferred by %s - %s",
+		msg.Change.Project, msg.Change.Branch,
+		msg.Change.Subject, msg.Change.Owner.Name,
+		msg.Deferrer.Name,
+		msg.Change.Url)
+	c.WriteMessage(gerritChannel, str)
+}
+
 func handleChangeAbandoned(c *client.IrcClient, msg *GerritMessage) {
 	// TODO: msg.Owner.Name != msg.Abandoner.Name, note
 	// separately since someone else updating a patch is

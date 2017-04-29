@@ -72,6 +72,9 @@ type GerritMessage struct {
 	// Used in change-abandoned
 	Abandoner GerritPerson `json:"abandoner"`
 
+	// Used in change-deferred
+	Deferrer GerritPerson `json:"deferrer"`
+
 	// used in ref-updated
 	Submitter GerritPerson    `json:"submitter"`
 	RefUpdate GerritRefUpdate `json:"refUpdate"`
