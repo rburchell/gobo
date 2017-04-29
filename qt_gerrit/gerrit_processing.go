@@ -118,6 +118,18 @@ func handleChangeMerged(c *client.IrcClient, msg *GerritMessage) {
 	c.WriteMessage(gerritChannel, str)
 }
 
+func handleChangeAbandoned(c *client.IrcClient, msg *GerritMessage) {
+	// TODO: msg.Owner.Name != msg.Abandoner.Name, note
+	// separately since someone else updating a patch is
+	// significant
+	str := fmt.Sprintf("[%s/%s] %s owned by %s was abandoned by %s - %s",
+		msg.Change.Project, msg.Change.Branch,
+		msg.Change.Subject, msg.Change.Owner.Name,
+		msg.Abandoner.Name,
+		msg.Change.Url)
+	c.WriteMessage(gerritChannel, str)
+}
+
 func handleMergeFailed(c *client.IrcClient, msg *GerritMessage) {
 	reasons := strings.Split(msg.Reason, "\n")
 	reason := reasons[0]

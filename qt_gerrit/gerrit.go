@@ -69,6 +69,9 @@ type GerritMessage struct {
 	} `json:"approvals"`
 	Comment string `json:"comment"`
 
+	// Used in change-abandoned
+	Abandoner GerritPerson `json:"abandoner"`
+
 	// used in ref-updated
 	Submitter GerritPerson    `json:"submitter"`
 	RefUpdate GerritRefUpdate `json:"refUpdate"`

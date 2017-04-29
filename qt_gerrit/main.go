@@ -149,6 +149,8 @@ func main() {
 				refUpdateChan := make(chan string)
 				go handleRefUpdate(refUpdateChan, msg)
 				go messageDrainer(c, gerritChannel, refUpdateChan)
+			} else if msg.Type == "change-abandoned" {
+				handleChangeAbandoned(c, msg)
 			}
 			println(fmt.Sprintf("Gerrit: Message: %s\n", msg.OriginalJson))
 		}
