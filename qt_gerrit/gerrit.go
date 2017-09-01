@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
+	"net"
 	"os"
 	"time"
 )
@@ -110,6 +111,9 @@ func (this *GerritClient) connectToGerrit(signer *ssh.Signer) (*ssh.Client, *buf
 			Ciphers: []string{
 				"aes128-cbc",
 			},
+		},
+		HostKeyCallback: func(host string, remote net.Addr, key ssh.PublicKey) error {
+			return nil
 		},
 	}
 
