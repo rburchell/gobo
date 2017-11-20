@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // a Stat represents a single measurement about a single statistic for a domain.
@@ -45,6 +46,8 @@ type Stat struct {
 
 	// values for influx
 	values map[string]string
+
+	timestamp *time.Time
 }
 
 // Create an empty stat representing a given table, and tableSuffix. The table and
@@ -71,6 +74,16 @@ func (this *Stat) SetKey(key string) {
 // Get the key representing multiple entries for the same table. See SetKey().
 func (this *Stat) Key() string {
 	return this.key
+}
+
+// Get the timestamp for this sample
+func (this *Stat) Timestamp() *time.Time {
+	return this.timestamp
+}
+
+// Set the timestamp for this sample
+func (this *Stat) SetTimestamp(timestamp time.Time) {
+	this.timestamp = &timestamp
 }
 
 // Get the table name (e.g. "cpu" for CPU measurements). This is used to create
@@ -149,5 +162,9 @@ func (this *Stat) InfluxString() string {
 	}
 	vstr = vstr[:len(vstr)-1]
 
-	return fmt.Sprintf("%s %s\n", tstr, vstr)
+	if this.timestamp != nil {
+		return fmt.Sprintf("%s %s %d\n", tstr, vstr, this.timestamp.UnixNano())
+	} else {
+		return fmt.Sprintf("%s %s\n", tstr, vstr)
+	}
 }
