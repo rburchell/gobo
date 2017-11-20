@@ -63,25 +63,7 @@ func (this *Client) Login(addr string, port string, user string, pass string) er
 		"username": user,
 		"password": pass,
 	}
-	json, _ := json.Marshal(auth)
-	params := bytes.NewReader(json)
-	req, err := http.NewRequest("POST", url, params)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Accept", "application/json")
-	resp, err := this.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Not a successful request: %d (%s)", resp.StatusCode, body))
-	}
-
-	return nil
+	return postInto(url, auth, this.httpClient, nil)
 }
 
 func getInto(url string, httpClient *http.Client, mytype interface{}) error {
@@ -98,5 +80,33 @@ func getInto(url string, httpClient *http.Client, mytype interface{}) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func postInto(url string, pmap interface{}, httpClient *http.Client, mytype interface{}) error {
+	paramJson, _ := json.Marshal(pmap)
+	params := bytes.NewReader(paramJson)
+	req, err := http.NewRequest("POST", url, params)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Accept", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(fmt.Sprintf("Not a successful request: %d (to %s)", resp.StatusCode, url))
+	}
+
+	defer resp.Body.Close()
+
+	if mytype != nil {
+		body, _ := ioutil.ReadAll(resp.Body)
+		err = json.Unmarshal(body, mytype)
+	}
+
 	return nil
 }
