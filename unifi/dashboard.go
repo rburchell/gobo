@@ -31,7 +31,7 @@ import (
 func (this *Client) FetchDashboard() ([]DashboardInfo, error) {
 	url := fmt.Sprintf("https://%s:%s/api/s/default/stat/dashboard?scale=5minutes", this.addr, this.port)
 	response := &DashboardResponse{}
-	err := fetchInto(url, this.httpClient, response)
+	err := getInto(url, this.httpClient, response)
 	if err != nil {
 		return nil, err
 	}

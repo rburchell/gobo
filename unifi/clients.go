@@ -31,7 +31,7 @@ import (
 func (this *Client) FetchDevices() ([]UnifiClient, error) {
 	url := fmt.Sprintf("https://%s:%s/api/s/default/stat/sta", this.addr, this.port)
 	response := &ClientResponse{}
-	err := fetchInto(url, this.httpClient, response)
+	err := getInto(url, this.httpClient, response)
 	if err != nil {
 		return nil, err
 	}

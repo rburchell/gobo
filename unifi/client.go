@@ -84,7 +84,7 @@ func (this *Client) Login(addr string, port string, user string, pass string) er
 	return nil
 }
 
-func fetchInto(url string, httpClient *http.Client, mytype interface{}) error {
+func getInto(url string, httpClient *http.Client, mytype interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Add("Accept", "application/json")
 	resp, err := httpClient.Do(req)
