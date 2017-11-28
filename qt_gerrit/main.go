@@ -26,8 +26,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/rburchell/gobo/irc/client"
-	"github.com/rburchell/gobo/irc/parser"
+	"github.com/rburchell/gobo/lib/irc/client"
+	"github.com/rburchell/gobo/lib/irc/parser"
 	"os"
 	"regexp"
 	"strings"

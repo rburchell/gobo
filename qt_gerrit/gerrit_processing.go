@@ -26,7 +26,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/rburchell/gobo/irc/client"
+	"github.com/rburchell/gobo/lib/irc/client"
 	"os"
 	"strings"
 )

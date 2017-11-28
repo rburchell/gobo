@@ -26,7 +26,7 @@
 
 package fuzz
 
-import "github.com/rburchell/gobo/irc/parser"
+import "github.com/rburchell/gobo/lib/irc/parser"
 
 func Fuzz(data []byte) int {
 	c := parser.ParseLine(string(data))
