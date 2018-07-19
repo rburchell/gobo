@@ -13,7 +13,7 @@ type desktopTest struct {
 	output        *DesktopFile
 }
 
-func TestSimple(t *testing.T) {
+func TestParse(t *testing.T) {
 	tests := []desktopTest{
 		desktopTest{
 			input:         "a",
@@ -163,4 +163,32 @@ func TestSimple(t *testing.T) {
 		assert.Equal(t, df, tc.output)
 		//log.Printf("Passed: %s == %+v", tc.input, df)
 	}
+}
+
+func TestAPI(t *testing.T) {
+	test := desktopTest{
+		input: "[Desktop Entry]\nA=B",
+		output: &DesktopFile{
+			Sections: []DesktopSection{
+				DesktopSection{
+					Name: "Desktop Entry",
+					Values: []DesktopValue{
+						DesktopValue{
+							Key:   "A",
+							Value: "B",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	b := bytes.NewBufferString(test.input)
+	df, err := Parse(b)
+	assert.Equal(t, err, nil)
+
+	assert.Equal(t, df.FindFirst("A"), &DesktopValue{Key: "A", Value: "B"})
+	assert.Equal(t, df.FindAll("A"), []DesktopValue{DesktopValue{Key: "A", Value: "B"}})
+	assert.Equal(t, df.Sections[0].FindFirst("A"), &DesktopValue{Key: "A", Value: "B"})
+	assert.Equal(t, df.Sections[0].FindAll("A"), []DesktopValue{DesktopValue{Key: "A", Value: "B"}})
 }

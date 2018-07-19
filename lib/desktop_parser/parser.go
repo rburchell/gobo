@@ -1,29 +1,51 @@
 package desktop_parser
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 )
 
 type state uint8
 
+// The parser works as a simple state machine.
+// These are the states, and roughly what they are for.
 const (
+	// The entry state. Only valid transition is to state_section, or state_key
+	// once a section has been identified.
 	state_none state = iota
+
+	// Transitions back to state_none when a section is found.
 	state_section
+
+	// Transitions to state_key_locale when a [ is found in a key.
 	state_key
-	state_key_locale      // optional, Name[en]
-	state_key_locale_post // only allow equals or whitespace.
+
+	// Transitions to state_key_locale_post when a ] is found after a locale.
+	state_key_locale
+
+	// Only allow equals or whitespace. Transitions to state_value_pre.
+	state_key_locale_post
+
+	// Eats whitespace. Transitions to state_value on anything else.
 	state_value_pre
+
+	// Reads a value. Transitions back to state_none once done.
 	state_value
 )
 
 type parser struct {
-	sections    []DesktopSection
+	sections []DesktopSection
+
+	// Current section name being read.
 	sectionName string
-	keyName     string
-	keyLocale   string
-	value       string
+
+	// Current key name being read.
+	keyName string
+
+	// Current key locale being read (if any).
+	keyLocale string
+
+	// Current value being read.
+	value string
 }
 
 func (this *parser) parseStateNone(c rune) (state, error) {
@@ -138,122 +160,4 @@ func (this *parser) parseStateValue(c rune) (state, error) {
 	}
 
 	return state_value, nil
-}
-
-type DesktopFile struct {
-	Sections []DesktopSection
-}
-
-func (this *DesktopFile) FindFirst(key string) *DesktopValue {
-	return this.Sections[0].FindFirst(key)
-}
-
-func (this *DesktopFile) FindAll(key string) []DesktopValue {
-	return this.Sections[0].FindAll(key)
-}
-
-type DesktopSection struct {
-	Name   string
-	Values []DesktopValue
-}
-
-func (this DesktopSection) FindFirst(key string) *DesktopValue {
-	for _, v := range this.Values {
-		if v.Key == key {
-			return &v
-		}
-	}
-
-	return nil
-}
-
-func (this DesktopSection) FindAll(key string) []DesktopValue {
-	ret := []DesktopValue{}
-	for _, v := range this.Values {
-		if v.Key == key {
-			ret = append(ret, v)
-		}
-	}
-
-	return ret
-}
-
-type DesktopValue struct {
-	Key    string
-	Locale string
-	Value  string
-}
-
-func Parse(fd io.Reader) (*DesktopFile, error) {
-	lineState := state_none
-
-	l := parser{}
-	br := bufio.NewReader(fd)
-
-	for {
-		c, _, err := br.ReadRune()
-		if err != nil {
-			if err == io.EOF {
-				l.endValue()
-
-				// ### should do some cleanup/validation
-				// ensure there's a Desktop Entry section
-				// set it as the default on the Desktop File rather than assuming it's first
-				// don't allow duplicate sections
-				// don't allow duplicate key+locale in a section
-
-				return &DesktopFile{l.sections}, nil
-			} else {
-				return nil, fmt.Errorf("Error while reading: %s", err)
-			}
-		}
-
-		switch lineState {
-		case state_none:
-			lineState, err = l.parseStateNone(c)
-			if err != nil {
-				return nil, err
-			}
-		case state_section:
-			lineState, err = l.parseStateSection(c)
-			if err != nil {
-				return nil, err
-			}
-		case state_key:
-			lineState, err = l.parseStateKey(c)
-			if err != nil {
-				return nil, err
-			}
-		case state_key_locale:
-			lineState, err = l.parseStateKeyLocale(c)
-			if err != nil {
-				return nil, err
-			}
-		case state_key_locale_post:
-			lineState, err = l.parseStateKeyLocalePost(c)
-			if err != nil {
-				return nil, err
-			}
-		case state_value_pre:
-			lineState, err = l.parseStateValuePre(c)
-			if err != nil {
-				return nil, err
-			}
-
-			if lineState == state_value {
-				// whitespace all skipped. read a value char.
-				lineState, err = l.parseStateValue(c)
-				if err != nil {
-					return nil, err
-				}
-			}
-		case state_value:
-			lineState, err = l.parseStateValue(c)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			panic(fmt.Sprintf("Unknown state %d", lineState))
-		}
-	}
 }
