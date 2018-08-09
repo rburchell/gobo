@@ -39,6 +39,8 @@ type IrcClient struct {
 	nick            string
 	user            string
 	realname        string
+	nsUser          string
+	nsPass          string
 	irc_channels    []string
 	connected       bool
 }
@@ -68,16 +70,16 @@ func pinger(client *IrcClient, pingChan chan int) {
 	}
 }
 
-func NewClient(nick string, user string, realname string) *IrcClient {
-	client := new(IrcClient)
-	mchan := make(chan *parser.IrcMessage)
-	client.CommandChannel = mchan
-	client.callbacks = make(map[string][]CommandFunc)
-	client.nick = nick
-	client.user = user
-	client.realname = realname
-
-	return client
+func NewClient(nick, user, realname, nsUser, nsPass string) *IrcClient {
+	return &IrcClient{
+		CommandChannel: make(chan *parser.IrcMessage),
+		callbacks:      make(map[string][]CommandFunc),
+		nick:           nick,
+		user:           user,
+		realname:       realname,
+		nsUser:         nsUser,
+		nsPass:         nsPass,
+	}
 }
 
 func (this *IrcClient) AddCallback(command string, callback CommandFunc) {
@@ -125,6 +127,7 @@ func (this *IrcClient) Run(host string) {
 				} else {
 					// TODO: handle 443:
 					// :weber.freenode.net 433 * qt_gerrit :Nickname is already in use.
+					this.WriteLine(fmt.Sprintf("PASS %s:%s", this.nsUser, this.nsPass))
 					this.WriteLine(fmt.Sprintf("NICK %s", this.nick))
 					this.WriteLine(fmt.Sprintf("USER %s * * :%s", this.user, this.realname))
 					scanner = bufio.NewScanner(this.conn)

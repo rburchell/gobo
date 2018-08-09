@@ -53,7 +53,17 @@ func main() {
 		panic("Must provide environment variable GERRIT_CHANNEL")
 	}
 
-	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot")
+	nsUser := os.Getenv("NICKSERV_USER")
+	if len(nsUser) == 0 {
+		panic("Must provide environment variable NICKSERV_USER")
+	}
+
+	nsPass := os.Getenv("NICKSERV_PASS")
+	if len(nsPass) == 0 {
+		panic("Must provide environment variable NICKSERV_PASS")
+	}
+
+	c := client.NewClient("qt_gerrit", "qt_gerrit", "Qt IRC Bot", nsUser, nsPass)
 
 	c.AddCallback(client.OnMessage, func(c *client.IrcClient, command *parser.IrcMessage) {
 		directRegex := regexp.MustCompile(`^([^ ]+[,:] )`)
@@ -106,18 +116,6 @@ func main() {
 
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
-
-		nsUser := os.Getenv("NICKSERV_USER")
-		if len(nsUser) == 0 {
-			panic("Must provide environment variable NICKSERV_USER")
-		}
-
-		nsPass := os.Getenv("NICKSERV_PASS")
-		if len(nsPass) == 0 {
-			panic("Must provide environment variable NICKSERV_PASS")
-		}
-
-		c.WriteLine(fmt.Sprintf("NS IDENTIFY %s %s", nsUser, nsPass))
 		c.Join(ircChannels)
 	})
 
