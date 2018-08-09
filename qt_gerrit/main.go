@@ -94,6 +94,16 @@ func main() {
 		go messageDrainer(c, command.Parameters[0], ghChan)
 	})
 
+	ircServer := os.Getenv("IRC_SERVER")
+	if len(ircServer) == 0 {
+		panic("Must provide environment variable IRC_SERVER")
+	}
+
+	ircChannels := os.Getenv("IRC_CHANNELS")
+	if len(ircChannels) == 0 {
+		panic("Must provide environment variable IRC_CHANNELS")
+	}
+
 	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
 		fmt.Printf("In CONNECTED callback: %v\n", command)
 
@@ -108,19 +118,9 @@ func main() {
 		}
 
 		c.WriteLine(fmt.Sprintf("NS IDENTIFY %s %s", nsUser, nsPass))
+		c.Join(ircChannels)
 	})
 
-	ircServer := os.Getenv("IRC_SERVER")
-	if len(ircServer) == 0 {
-		panic("Must provide environment variable IRC_SERVER")
-	}
-
-	ircChannels := os.Getenv("IRC_CHANNELS")
-	if len(ircChannels) == 0 {
-		panic("Must provide environment variable IRC_CHANNELS")
-	}
-
-	c.Join(ircChannels)
 	go c.Run(ircServer)
 
 	gc := NewClient()
