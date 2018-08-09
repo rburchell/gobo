@@ -109,16 +109,16 @@ func main() {
 		panic("Must provide environment variable IRC_SERVER")
 	}
 
+	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
+		fmt.Printf("Connected to IRC\n", command)
+	})
+
 	ircChannels := os.Getenv("IRC_CHANNELS")
 	if len(ircChannels) == 0 {
 		panic("Must provide environment variable IRC_CHANNELS")
 	}
 
-	c.AddCallback(client.OnConnected, func(c *client.IrcClient, command *parser.IrcMessage) {
-		fmt.Printf("In CONNECTED callback: %v\n", command)
-		c.Join(ircChannels)
-	})
-
+	c.Join(ircChannels)
 	go c.Run(ircServer)
 
 	gc := NewClient()
