@@ -1,6 +1,6 @@
 // +build !release
 
-package engine
+package loader
 
 import (
 	"fmt"
