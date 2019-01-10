@@ -75,13 +75,9 @@ func (b *xbuffer) ReadFull(p []byte) (int, error) {
 	return copy(p, b.buf[o:end]), err
 }
 
-func newReaderAt(r io.Reader) io.ReaderAt {
-	// ### at least jpeg requires an xbuffer, so disable this fallback for now.
-	//if ra, ok := r.(io.ReaderAt); ok {
-	//	return ra
-	//}
+func newXbuffer(r io.Reader, sharedBuf []byte) *xbuffer {
 	return &xbuffer{
 		r:   r,
-		buf: make([]byte, 0, 2),
+		buf: sharedBuf,
 	}
 }

@@ -1,15 +1,13 @@
 package fastsizer
 
-func (f *decoder) getGIFImageSize() (*ImageSize, error) {
-	slice, err := f.reader.(*xbuffer).Slice(6, 4)
+func (f *decoder) getGIFImageSize() (ImageSize, error) {
+	slice, err := f.reader.Slice(6, 4)
 	if err != nil {
-		return nil, err
+		return ImageSize{}, err
 	}
 
-	imageSize := ImageSize{}
-
-	imageSize.Width = uint32(readULint16(slice[0:2]))
-	imageSize.Height = uint32(readULint16(slice[2:4]))
-
-	return &imageSize, nil
+	return ImageSize{
+		Width:  uint32(readULint16(slice[0:2])),
+		Height: uint32(readULint16(slice[2:4])),
+	}, nil
 }

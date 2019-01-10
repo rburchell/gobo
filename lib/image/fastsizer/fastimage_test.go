@@ -2,6 +2,28 @@ package fastsizer
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"testing"
+)
+
+func BenchmarkJpeg(b *testing.B) {
+	f, err := os.Open("test.jpg")
+	if err != nil {
+		panic(fmt.Sprintf("error loading: %s", err))
+	}
+	fi := NewFastSizer()
+	for i := 0; i < b.N; i++ {
+		f.Seek(0, io.SeekStart)
+		fi.Detect(f)
+	}
+	f.Close()
+}
+
+/*
+
+import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -184,3 +206,4 @@ func BenchmarkWEBPImageA(b *testing.B) {
 		fmt.Printf("%+v\n", err)
 	}
 }
+*/

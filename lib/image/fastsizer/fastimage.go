@@ -1,65 +1,96 @@
 package fastsizer
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 )
 
 // FastImage instance needs to be initialized before use
 type FastImage struct {
+	tb             []byte
+	internalBuffer []byte
 }
 
 // NewFastSizer returns a FastImage client
 func NewFastSizer() *FastImage {
-	return &FastImage{}
+	return &FastImage{tb: make([]byte, 2), internalBuffer: make([]byte, 0, 2)}
 }
 
 type decoder struct {
-	reader io.ReaderAt
+	reader *xbuffer
 }
 
 //Detect image type and size
-func (f *FastImage) Detect(reader io.Reader) (ImageType, *ImageSize, error) {
-	//start := time.Now().UnixNano()
-
-	d := &decoder{reader: newReaderAt(reader)}
+func (this *FastImage) Detect(reader io.Reader) (ImageType, ImageSize, error) {
+	this.internalBuffer = this.internalBuffer[0:0]
+	d := &decoder{reader: newXbuffer(reader, this.internalBuffer)}
 
 	var t ImageType
-	var s *ImageSize
+	var s ImageSize
 	var e error
 
-	typebuf := make([]byte, 2)
-	if _, err := d.reader.ReadAt(typebuf, 0); err != nil {
-		return Unknown, nil, err
+	if _, err := d.reader.ReadAt(this.tb, 0); err != nil {
+		return Unknown, ImageSize{}, err
 	}
 
-	switch {
-	case string(typebuf) == "BM":
-		t = BMP
-		s, e = d.getBMPImageSize()
-	case bytes.Equal(typebuf, []byte{0x47, 0x49}):
-		t = GIF
-		s, e = d.getGIFImageSize()
-	case bytes.Equal(typebuf, []byte{0xFF, 0xD8}):
-		t = JPEG
-		s, e = d.getJPEGImageSize()
-	case bytes.Equal(typebuf, []byte{0x89, 0x50}):
-		t = PNG
-		s, e = d.getPNGImageSize()
-	case string(typebuf) == "II" || string(typebuf) == "MM":
-		t = TIFF
-		s, e = d.getTIFFImageSize()
-	case string(typebuf) == "RI":
-		t = WEBP
-		s, e = d.getWEBPImageSize()
-	default:
-		t = Unknown
-		e = fmt.Errorf("Unkown image type[%v]", typebuf)
+	ok := false
+
+	switch this.tb[0] {
+	case 'B':
+		switch this.tb[1] {
+		case 'M':
+			t = BMP
+			s, e = d.getBMPImageSize()
+			ok = true
+		}
+	case 0x47:
+		switch this.tb[1] {
+		case 0x49:
+			t = GIF
+			s, e = d.getGIFImageSize()
+			ok = true
+		}
+	case 0xFF:
+		switch this.tb[1] {
+		case 0xD8:
+			t = JPEG
+			s, e = d.getJPEGImageSize()
+			ok = true
+		}
+	case 0x89:
+		switch this.tb[1] {
+		case 0x50:
+			t = PNG
+			s, e = d.getPNGImageSize()
+			ok = true
+		}
+	case 'I':
+		switch this.tb[1] {
+		case 'I':
+			t = TIFF
+			s, e = d.getTIFFImageSize()
+			ok = true
+		}
+	case 'M':
+		switch this.tb[1] {
+		case 'M':
+			t = TIFF
+			s, e = d.getTIFFImageSize()
+			ok = true
+		}
+	case 'R':
+		switch this.tb[1] {
+		case 'I':
+			t = WEBP
+			s, e = d.getWEBPImageSize()
+			ok = true
+		}
 	}
-	//stop := time.Now().UnixNano()
-	//if stop-start > 500000000 {
-	//	fmt.Printf("[%v]%v\n", stop-start, f.Url)
-	//}
+
+	this.internalBuffer = d.reader.buf
+
+	if !ok {
+		return Unknown, ImageSize{}, fmt.Errorf("Unknown image type (%v)", this.tb)
+	}
 	return t, s, e
 }

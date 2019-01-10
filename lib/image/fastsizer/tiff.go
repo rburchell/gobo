@@ -7,10 +7,10 @@ import (
 	"math"
 )
 
-func (f *decoder) getTIFFImageSize() (*ImageSize, error) {
+func (f *decoder) getTIFFImageSize() (ImageSize, error) {
 	p := make([]byte, 8)
 	if _, err := f.reader.ReadAt(p, 0); err != nil {
-		return nil, err
+		return ImageSize{}, err
 	}
 
 	var bo binary.ByteOrder
@@ -20,19 +20,19 @@ func (f *decoder) getTIFFImageSize() (*ImageSize, error) {
 	case beHeader:
 		bo = binary.BigEndian
 	default:
-		return nil, fmt.Errorf("malformed header")
+		return ImageSize{}, fmt.Errorf("malformed header")
 	}
 	ifdOffset := int64(bo.Uint32(p[4:8]))
 
 	// The first two bytes contain the number of entries (12 bytes each).
 	if _, err := f.reader.ReadAt(p[0:2], ifdOffset); err != nil {
-		return nil, err
+		return ImageSize{}, err
 	}
 	numItems := int(bo.Uint16(p[0:2]))
 	// All IFD entries are read in one chunk.
 	p = make([]byte, ifdLen*numItems)
 	if _, err := f.reader.ReadAt(p, ifdOffset+2); err != nil {
-		return nil, err
+		return ImageSize{}, err
 	}
 
 	imageSize := ImageSize{}
@@ -51,7 +51,7 @@ func (f *decoder) getTIFFImageSize() (*ImageSize, error) {
 		}
 	}
 
-	return &imageSize, nil
+	return imageSize, nil
 }
 
 var lengths = [...]uint32{0, 1, 1, 2, 4, 8}
