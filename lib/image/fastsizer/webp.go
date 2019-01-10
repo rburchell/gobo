@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 func (f *decoder) getWEBPImageSize() (*ImageSize, error) {
 	slice, err := f.reader.(*xbuffer).Slice(26, 4)

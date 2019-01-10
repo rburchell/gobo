@@ -1,23 +1,15 @@
 # fastimage
 
-Golang implementation of [fastimage](https://pypi.python.org/pypi/fastimage/0.2.1).
+Detect the size and type of an image, quickly.
 
 Finds the type and/or size of an image given its uri by fetching as little as needed.
 
-**RECREATED** and **IMPROVED** fastimage for golang.
+fastimage only reads the minimal amount needed to return the dimensions.
+It does not interpret any more of the image than necessary, and only reads the
+minimal amount.
 
-Started from Ruben Fonseca (@[rubenfonseca](http://twitter.com/rubenfonseca)) 's fastimage [https://github.com/rubenfonseca/fastimage](https://github.com/rubenfonseca/fastimage)
-
-Included TIFF and WEBP support from [https://github.com/golang/image](https://github.com/golang/image)
-
-## How?
-
-fastimage parses the image data as it is downloaded. As soon as it finds out
-the size and type of the image, it stops the download.
-
-## Install
-
-    $ go get github.com/sillydong/fastimage
+Unlike the original libraries, it does not do any fetching of the resource. It
+wants to be given an io.Reader instead, to allow generic detection from any source.
 
 ## Usage
 
@@ -26,38 +18,9 @@ For instance, this is a big 10MB JPEG image on wikipedia:
 **Method1**
 
 ```go
-customHeaders := map[string]string{
-    "X-SECRET-HEADER": "your-header-value"
-}
-instance := fastimage.NewFastImage(2, customHeaders)
-//leave it to nil to use default header settings
-//eg. 
-//instance := fastimage.NewFastImage(2, nil)
-
-url1 := "http://upload.wikimedia.org/wikipedia/commons/9/9a/SKA_dishes_big.jpg"
-imagetype1, size1, err1 := instance.Detect(url1)
-fmt.Printf("%+v\t%+v\t%+v\n", imagetype1, size1, err1)
-
-url2 := "http://upload.wikimedia.org/wikipedia/commons/9/9a/SKA_dishes_big.jpg"
-imagetype2, size2, err2 := instance.Detect(url2)
-fmt.Printf("%+v\t%+v\t%+v\n", imagetype2, size2, err2)
+fs := fastsizer.NewFastSizer()
+typ, sz, err := fs.Detect(myReader)
 ```
-
-**Method2**
-
-```go
-url1 := "http://upload.wikimedia.org/wikipedia/commons/9/9a/SKA_dishes_big.jpg"
-imagetype1, size1, err1 := fastimage.GetImageSize(url1)
-fmt.Printf("%+v\t%+v\t%+v\n", imagetype1, size1, err1)
-
-url2 := "http://upload.wikimedia.org/wikipedia/commons/9/9a/SKA_dishes_big.jpg"
-imagetype2, size2, err2 := fastimage.GetImageSize(url2)
-fmt.Printf("%+v\t%+v\t%+v\n", imagetype2, size2, err2)
-```
-
-**Notice**
-
-Method1 is better to detect multiple images because it shares one *http.Client.
 
 ## Supported file types
 
@@ -70,15 +33,9 @@ Method1 is better to detect multiple images because it shares one *http.Client.
 | TIFF      | Yes              | Yes              |
 | WEBP      | Yes              | Yes              |
 
-**Notice**
-
-Some webp images' Content-Type in header is `text/plain`. Here in this library we only parse response data when Content-Type has keyword **"image"** in.
-
-
-## TODO
-
-I'm thinking about using [`valyala/fasthttp`](https://github.com/valyala/fasthttp) to replace `net/http` to get better network performance.
-
 ### License
 
-fastimage is under MIT license. See the [LICENSE](https://github.com/sillydong/fastimage/blob/master/LICENSE) file for details.
+fastimage is under MIT license. See the LICENSE file for details.
+
+Based on code from [@sillydong](https://github.com/sillydong/fastimage), which
+in turn was originally based on code from [Ruben Fonseca](https://github.com/rubenfonseca/fastimage).

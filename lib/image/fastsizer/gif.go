@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 func (f *decoder) getGIFImageSize() (*ImageSize, error) {
 	slice, err := f.reader.(*xbuffer).Slice(6, 4)

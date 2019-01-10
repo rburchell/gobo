@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 import (
 	"io"
@@ -76,9 +76,10 @@ func (b *xbuffer) ReadFull(p []byte) (int, error) {
 }
 
 func newReaderAt(r io.Reader) io.ReaderAt {
-	if ra, ok := r.(io.ReaderAt); ok {
-		return ra
-	}
+	// ### at least jpeg requires an xbuffer, so disable this fallback for now.
+	//if ra, ok := r.(io.ReaderAt); ok {
+	//	return ra
+	//}
 	return &xbuffer{
 		r:   r,
 		buf: make([]byte, 0, 2),

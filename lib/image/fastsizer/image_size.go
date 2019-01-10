@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 // ImageSize holds the width and height of an image
 type ImageSize struct {

@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 import "fmt"
 

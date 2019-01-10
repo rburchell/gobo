@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 func (f *decoder) getBMPImageSize() (*ImageSize, error) {
 	slice, err := f.reader.(*xbuffer).Slice(18, 8)

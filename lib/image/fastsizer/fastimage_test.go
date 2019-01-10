@@ -1,4 +1,4 @@
-package fastimage
+package fastsizer
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 var fastimage *FastImage
 
 func init() {
-	fastimage = NewFastImage(2, nil)
+	fastimage = NewFastSizer()
 }
 
 func TestBuffer(b *testing.T) {
@@ -53,15 +53,6 @@ func TestBuffer(b *testing.T) {
 			fmt.Printf("%+v\n", buffers2)
 		}
 	}
-}
-
-func TestBytes(b *testing.T) {
-	bytes := []byte("abcdefghijklmnopqrstuvwxyz")
-	fmt.Printf("%+v\n", bytes)
-	fmt.Printf("%+v\n", bytes[2])
-	fmt.Printf("%+v\n", bytes[2:4])
-	fmt.Printf("%+v\n", bytes[22:25])
-	fmt.Println(len(bytes))
 }
 
 func TestImage(t *testing.T) {
