@@ -101,32 +101,31 @@ func tokenize(query string) ([]string, error) {
 //
 // Search: []string{"with", ":", "friends"}
 // Replace: []string{"alice", "&&", "bob"}
+//
+// Note that some built-in replacements are specified, such as: "&", "&" -> "&&"
+// and other similar common comparison terms.
 type TokenReplacement struct {
 	Search  []string
 	Replace []string
 }
 
-// Replace a series of tokens into another series of tokens.
-//
-// This will happen iteratively, until there is nothing left to replace.
-// For example, "|" "|" => "||"
-func (this *searchQuery) Replace(replacements []TokenReplacement) {
+func replace(replacements []TokenReplacement, in []string) []string {
 	replaced := []string{}
 	replaceAgain := true
 	for replaceAgain {
-		for idx := 0; idx < len(this.tokens); idx++ {
-			tok := this.tokens[idx]
+		for idx := 0; idx < len(in); idx++ {
+			tok := in[idx]
 			wasReplaced := false
 
 			for _, rep := range replacements {
 				found := true
 				for sidx := 0; sidx < len(rep.Search); sidx++ {
-					if idx+sidx >= len(this.tokens) {
+					if idx+sidx >= len(in) {
 						found = false
 						break
 					}
 
-					if this.tokens[idx+sidx] != rep.Search[sidx] {
+					if in[idx+sidx] != rep.Search[sidx] {
 						found = false
 						break
 					}
@@ -134,11 +133,11 @@ func (this *searchQuery) Replace(replacements []TokenReplacement) {
 
 				if found {
 					replaced = append(replaced, rep.Replace...)
-					replaced = append(replaced, this.tokens[idx+len(rep.Search):]...)
+					replaced = append(replaced, in[idx+len(rep.Search):]...)
 					// start again
-					this.tokens = this.tokens[0:0]
+					in = in[0:0]
 					for _, tok := range replaced {
-						this.tokens = append(this.tokens, tok)
+						in = append(in, tok)
 					}
 					replaced = replaced[0:0]
 					idx = -1
@@ -150,7 +149,7 @@ func (this *searchQuery) Replace(replacements []TokenReplacement) {
 			if !wasReplaced {
 				replaced = append(replaced, tok)
 
-				if idx == len(this.tokens)-1 {
+				if idx == len(in)-1 {
 					replaceAgain = false
 					break
 				}
@@ -162,7 +161,15 @@ func (this *searchQuery) Replace(replacements []TokenReplacement) {
 	//for i,t := range replaced {
 	//	log.Printf("tok %d: %s", i,t)
 	//}
-	this.tokens = replaced
+	return replaced
+}
+
+// Replace a series of tokens into another series of tokens.
+//
+// This will happen iteratively, until there is nothing left to replace.
+// For example, "|" "|" => "||"
+func (this *searchQuery) Replace(replacements []TokenReplacement) {
+	this.tokens = replace(replacements, this.tokens)
 }
 
 func (this *searchQuery) peekToken() queryToken {

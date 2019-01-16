@@ -5,49 +5,100 @@ import (
 	"testing"
 )
 
-func tokenizeNoError(t *testing.T, in string) []string {
-	out, err := tokenize(in)
+func parseNoError(t *testing.T, q string) queryToken {
+	out, err := CreateQuery(q)
 	if err != nil {
-		t.Errorf("Tokenize of %s failed: %s", in, err)
+		t.Errorf("Parse of %s failed: %s", q, err)
 	}
-	return out
+	_, err = Evaluate(out, &emptyTestIndex{})
+	if err != nil {
+		t.Errorf("Evaluate of %s failed: %s", q, err)
+	}
+	return out.queryRoot
 }
 
-func TestTokenizeBasic(t *testing.T) {
-	assert.Equal(t, tokenizeNoError(t, " "), []string{})
-	assert.Equal(t, tokenizeNoError(t, ""), []string{})
-	assert.Equal(t, tokenizeNoError(t, "a"), []string{"a"})
-	assert.Equal(t, tokenizeNoError(t, "!"), []string{"!"})
-	assert.Equal(t, tokenizeNoError(t, "="), []string{"="})
-	assert.Equal(t, tokenizeNoError(t, ">"), []string{">"})
-	assert.Equal(t, tokenizeNoError(t, "<"), []string{"<"})
-	assert.Equal(t, tokenizeNoError(t, "("), []string{"("})
-	assert.Equal(t, tokenizeNoError(t, ")"), []string{")"})
-	assert.Equal(t, tokenizeNoError(t, "&"), []string{"&"})
-	assert.Equal(t, tokenizeNoError(t, "|"), []string{"|"})
-	assert.Equal(t, tokenizeNoError(t, ":"), []string{":"})
+type emptyTestIndex struct {
 }
 
-func TestTokenizeCompound(t *testing.T) {
-	assert.Equal(t, tokenizeNoError(t, "abcd"), []string{"abcd"})
+func (this *emptyTestIndex) QueryAll() chan ResultIdentifier { return nil }
+
+func (this *emptyTestIndex) QueryTagExact(tag string) chan ResultIdentifier { return nil }
+
+func (this *emptyTestIndex) QueryTagFuzzy(tag string) chan ResultIdentifier { return nil }
+
+func (this *emptyTestIndex) QueryTypedTags(tagType string) chan TypedResult { return nil }
+
+func (this *emptyTestIndex) CostTagExact(tag string) int64 { return 0 }
+
+func (this *emptyTestIndex) CostTagFuzzy(tag string) int64 { return 0 }
+
+func (this *emptyTestIndex) CostTypedTags(tagType string) int64 { return 0 }
+
+func (this *emptyTestIndex) CostAll() int64 { return 0 }
+
+func (this *emptyTestIndex) CreateFilteredIndex(filteredResults map[ResultIdentifier]ResultIdentifier) Index {
+	return nil
 }
 
-func TestStringLiteral(t *testing.T) {
-	assert.Equal(t, tokenizeNoError(t, "\"abcd\""), []string{"abcd"})
-	assert.Equal(t, tokenizeNoError(t, "\"ab  cd\""), []string{"ab  cd"})
-}
+func TestParseSimple(t *testing.T) {
+	type parserTest struct {
+		q    string
+		root queryToken
+	}
 
-func TestTokenizeExpression(t *testing.T) {
-	assert.Equal(t, tokenizeNoError(t, "a&&b"), []string{"a", "&", "&", "b"})
+	tests := []parserTest{
+		parserTest{
+			q:    "a",
+			root: tagQueryToken{tag: "a"},
+		},
+		parserTest{
+			q:    "\"a\"",
+			root: tagQueryToken{tag: "a"},
+		},
+		parserTest{
+			q:    "(a)",
+			root: tagQueryToken{tag: "a"},
+		},
+		parserTest{
+			q:    "!a",
+			root: notToken{right: tagQueryToken{tag: "a"}},
+		},
+		parserTest{
+			q:    "a&&b",
+			root: andQueryToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "b"}},
+		},
+		parserTest{
+			q:    "a||b",
+			root: orQueryToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "b"}},
+		},
+		parserTest{
+			q:    "a>5",
+			root: greaterThanToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "5"}},
+		},
+		parserTest{
+			q:    "a>=5",
+			root: greaterThanEqualToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "5"}},
+		},
+		parserTest{
+			q:    "a<5",
+			root: lessThanToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "5"}},
+		},
+		parserTest{
+			q:    "a<=5",
+			root: lessThanEqualToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "5"}},
+		},
+		parserTest{
+			q:    "a==5",
+			root: equalToToken{left: tagQueryToken{tag: "a"}, right: tagQueryToken{tag: "5"}},
+		},
+		parserTest{
+			q:    "a:5",
+			root: virtualToken{printable: "a:5", realToken: equalsQueryToken{equals: "a:5"}},
+		},
+	}
 
-	// now chuck in whitespace: it should not affect the end result
-	assert.Equal(t, tokenizeNoError(t, " a&&b"), []string{"a", "&", "&", "b"})
-	assert.Equal(t, tokenizeNoError(t, "a &&b"), []string{"a", "&", "&", "b"})
-	assert.Equal(t, tokenizeNoError(t, "a & &b"), []string{"a", "&", "&", "b"})
-	assert.Equal(t, tokenizeNoError(t, "a && b"), []string{"a", "&", "&", "b"})
-	assert.Equal(t, tokenizeNoError(t, "a &&b "), []string{"a", "&", "&", "b"})
-}
-
-func TestTokenizeComplexExpression(t *testing.T) {
-	assert.Equal(t, tokenizeNoError(t, "a&&b || (c && !d)"), []string{"a", "&", "&", "b", "|", "|", "(", "c", "&", "&", "!", "d", ")"})
+	for _, test := range tests {
+		v := parseNoError(t, test.q)
+		assert.Equal(t, v, test.root)
+	}
 }
