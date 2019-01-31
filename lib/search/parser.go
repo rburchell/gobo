@@ -17,6 +17,10 @@ func tokenize(query string) ([]string, error) {
 			return true
 		case '=':
 			return true
+		case '^':
+			return true
+		case '$':
+			return true
 		case '>':
 			return true
 		case '<':
@@ -197,6 +201,10 @@ func (this *searchQuery) readToken() queryToken {
 		ret = rParenToken{}
 	case ">":
 		ret = greaterThanToken{}
+	case "^":
+		ret = startsWithToken{}
+	case "$":
+		ret = endsWithToken{}
 	case ">=":
 		ret = greaterThanEqualToken{}
 	case "<":
@@ -233,6 +241,23 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 		return nil, fmt.Errorf("Unexpected &&")
 	case rParenToken:
 		return nil, fmt.Errorf("Unexpected )")
+	case startsWithToken:
+		left, err = this.parse(true) // fetch the expr
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := left.(tagQueryToken); !ok {
+			return nil, fmt.Errorf("Expected: tag following ^, got %+v", poss)
+		}
+		if poss == nil {
+			return nil, fmt.Errorf("Expected: $ after ^tag")
+		}
+		endsWith := this.readToken() // eat the poss (and assert it's a $)
+		if _, ok := endsWith.(endsWithToken); !ok {
+			return nil, fmt.Errorf("Expected: $, got %+v", poss)
+		}
+		left = equalsQueryToken{equals: left.(tagQueryToken).tag}
+		return left, nil
 	case lParenToken:
 		// we ate the ( already
 		left, err = this.parse(true) // fetch the expr
@@ -337,8 +362,10 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 			return tposs, nil
 		case rParenToken:
 			// ok; ignore (at this point, we must be the end of an lParenToken).
+		case endsWithToken:
+			// ok; ignore (at this point, we must be the end of a startsWithToken).
 		default:
-			return nil, fmt.Errorf("Unexpected token %+v (left hand side: %+v)", poss, left)
+			return nil, fmt.Errorf("Unexpected token %T %+v (left hand side: %T %+v)", poss, poss, left, left)
 		}
 	}
 

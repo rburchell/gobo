@@ -27,6 +27,8 @@ func TestTokenizeBasic(t *testing.T) {
 	assert.Equal(t, tokenizeNoError(t, "&"), []string{"&"})
 	assert.Equal(t, tokenizeNoError(t, "|"), []string{"|"})
 	assert.Equal(t, tokenizeNoError(t, ":"), []string{":"})
+	assert.Equal(t, tokenizeNoError(t, "^"), []string{"^"})
+	assert.Equal(t, tokenizeNoError(t, "$"), []string{"$"})
 }
 
 func TestTokenizeCompound(t *testing.T) {
@@ -49,6 +51,8 @@ func TestTokenizeExpression(t *testing.T) {
 	assert.Equal(t, tokenizeNoError(t, "a & &b"), []string{"a", "&", "&", "b"})
 	assert.Equal(t, tokenizeNoError(t, "a && b"), []string{"a", "&", "&", "b"})
 	assert.Equal(t, tokenizeNoError(t, "a &&b "), []string{"a", "&", "&", "b"})
+
+	assert.Equal(t, tokenizeNoError(t, "^ab$"), []string{"^", "ab", "$"})
 }
 
 func TestTokenizeComplexExpression(t *testing.T) {

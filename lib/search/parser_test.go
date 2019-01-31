@@ -102,3 +102,22 @@ func TestParseSimple(t *testing.T) {
 		assert.Equal(t, v, test.root)
 	}
 }
+
+func TestParseExactTag(t *testing.T) {
+	type parserTest struct {
+		q    string
+		root queryToken
+	}
+
+	tests := []parserTest{
+		parserTest{
+			q:    "^ab$",
+			root: equalsQueryToken{equals: "ab"},
+		},
+	}
+
+	for _, test := range tests {
+		v := parseNoError(t, test.q)
+		assert.Equal(t, v, test.root)
+	}
+}

@@ -86,10 +86,6 @@ func (this tagQueryToken) eval(index Index) chan ResultIdentifier {
 }
 func (this tagQueryToken) cost(index Index) int64 { return index.CostTagFuzzy(this.tag) }
 
-// ### we can't create these at present (there was a way, but it's broken).
-// consider how we ought to make this work in parsing.
-// perhaps we should repurpose "" to indicate an exact query, and require spaces
-// to be \escaped.
 type equalsQueryToken struct {
 	equals string
 }
@@ -324,6 +320,20 @@ func (this lessThanToken) eval(index Index) chan ResultIdentifier {
 func (this lessThanToken) cost(index Index) int64 {
 	return index.CostTypedTags(this.left.(tagQueryToken).tag) /* ### bad to just cast like this */
 }
+
+// '^'
+type startsWithToken struct{}
+
+func (this startsWithToken) check(index Index) error                { panic("unreachable") }
+func (this startsWithToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
+func (this startsWithToken) cost(index Index) int64                 { panic("unreachable") }
+
+// '$'
+type endsWithToken struct{}
+
+func (this endsWithToken) check(index Index) error                { panic("unreachable") }
+func (this endsWithToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
+func (this endsWithToken) cost(index Index) int64                 { panic("unreachable") }
 
 // '>'
 type greaterThanToken struct {
