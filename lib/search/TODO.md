@@ -1,0 +1,3 @@
+* fix crash when parsing something like: "a &&"
+  and token gets a nil right branch, which crashes in check.
+  fix at parse time, or check time? hm...
