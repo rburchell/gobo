@@ -257,7 +257,7 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 			return nil, fmt.Errorf("Expected: $, got %T %+v", endsWith, endsWith)
 		}
 		left = equalsQueryToken{equals: left.(tagQueryToken).tag}
-		return left, nil
+		// handle binary conditions below
 	case lParenToken:
 		// we ate the ( already
 		left, err = this.parse(true) // fetch the expr

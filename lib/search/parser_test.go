@@ -114,6 +114,10 @@ func TestParseExactTag(t *testing.T) {
 			q:    "^ab$",
 			root: equalsQueryToken{equals: "ab"},
 		},
+		parserTest{
+			q:    "(^a$ || ^b$)",
+			root: orQueryToken{left: equalsQueryToken{equals: "a"}, right: equalsQueryToken{equals: "b"}},
+		},
 	}
 
 	for _, test := range tests {
