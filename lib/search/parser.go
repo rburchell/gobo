@@ -247,14 +247,14 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 			return nil, err
 		}
 		if _, ok := left.(tagQueryToken); !ok {
-			return nil, fmt.Errorf("Expected: tag following ^, got %+v", poss)
+			return nil, fmt.Errorf("Expected: tag following ^, got %T %+v", left, left)
 		}
 		if poss == nil {
 			return nil, fmt.Errorf("Expected: $ after ^tag")
 		}
 		endsWith := this.readToken() // eat the poss (and assert it's a $)
 		if _, ok := endsWith.(endsWithToken); !ok {
-			return nil, fmt.Errorf("Expected: $, got %+v", poss)
+			return nil, fmt.Errorf("Expected: $, got %T %+v", endsWith, endsWith)
 		}
 		left = equalsQueryToken{equals: left.(tagQueryToken).tag}
 		return left, nil
@@ -266,7 +266,7 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 		}
 		rparen := this.readToken() // eat the )
 		if _, ok := rparen.(rParenToken); !ok {
-			return nil, fmt.Errorf("Expected: ), got %+v", poss)
+			return nil, fmt.Errorf("Expected: ), got %T %+v", rparen, rparen)
 		}
 		// handle binary conditions below
 	case notToken:
