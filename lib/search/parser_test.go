@@ -20,13 +20,13 @@ func parseNoError(t *testing.T, q string) queryToken {
 type emptyTestIndex struct {
 }
 
-func (this *emptyTestIndex) QueryAll() chan ResultIdentifier { return nil }
+func (this *emptyTestIndex) QueryAll() []ResultIdentifier { return nil }
 
-func (this *emptyTestIndex) QueryTagExact(tag string) chan ResultIdentifier { return nil }
+func (this *emptyTestIndex) QueryTagExact(tag string) []ResultIdentifier { return nil }
 
-func (this *emptyTestIndex) QueryTagFuzzy(tag string) chan ResultIdentifier { return nil }
+func (this *emptyTestIndex) QueryTagFuzzy(tag string) []ResultIdentifier { return nil }
 
-func (this *emptyTestIndex) QueryTypedTags(tagType string) chan TypedResult { return nil }
+func (this *emptyTestIndex) QueryTypedTags(tagType string) []TypedResult { return nil }
 
 func (this *emptyTestIndex) CostTagExact(tag string) int64 { return 0 }
 
@@ -37,7 +37,7 @@ func (this *emptyTestIndex) CostTypedTags(tagType string) int64 { return 0 }
 func (this *emptyTestIndex) CostAll() int64 { return 0 }
 
 func (this *emptyTestIndex) CreateFilteredIndex(filteredResults map[ResultIdentifier]ResultIdentifier) Index {
-	return nil
+	return &emptyTestIndex{}
 }
 
 func TestParseSimple(t *testing.T) {

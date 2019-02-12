@@ -35,19 +35,19 @@ type TypedResult struct {
 // similar).
 type Index interface {
 	// Return all results.
-	QueryAll() chan ResultIdentifier
+	QueryAll() []ResultIdentifier
 
 	// Return matches for a single tag.
-	QueryTagExact(tag string) chan ResultIdentifier
+	QueryTagExact(tag string) []ResultIdentifier
 
 	// Return matches that are, or are close to this tag (think of this as 'LIKE %foo%' in SQL).
-	QueryTagFuzzy(tag string) chan ResultIdentifier
+	QueryTagFuzzy(tag string) []ResultIdentifier
 
 	// Return the results for a typed query.
 	// The tag is the type to search for (e.g. 'year'), and the return value is
 	// expected to contain a TypedResult with the document identifier and value
 	// for the typed query.
-	QueryTypedTags(tagType string) chan TypedResult
+	QueryTypedTags(tagType string) []TypedResult
 
 	// Return the cost for querying this exact tag.
 	CostTagExact(tag string) int64

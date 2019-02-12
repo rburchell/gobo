@@ -17,7 +17,7 @@ type searchQuery struct {
 
 type queryToken interface {
 	check(index Index) error
-	eval(index Index) chan ResultIdentifier
+	eval(index Index) []ResultIdentifier
 	cost(index Index) int64
 }
 type notToken struct {
@@ -27,43 +27,38 @@ type notToken struct {
 func (this notToken) check(index Index) error {
 	return this.right.check(index)
 }
-func (this notToken) eval(index Index) chan ResultIdentifier {
-	resultChan := make(chan ResultIdentifier)
+func (this notToken) eval(index Index) []ResultIdentifier {
+	rhs := this.right.eval(index)
+	rhMap := make(map[ResultIdentifier]bool)
 
-	go func() {
-		rhs := this.right.eval(index)
-		rhMap := make(map[ResultIdentifier]bool)
+	for _, r := range rhs {
+		rhMap[r] = true
+	}
 
-		for r := range rhs {
-			rhMap[r] = true
+	all := index.QueryAll()
+	results := make([]ResultIdentifier, 0, len(all))
+
+	for _, re := range all {
+		if _, ok := rhMap[re]; !ok {
+			results = append(results, re)
 		}
+	}
 
-		all := index.QueryAll()
-
-		for re := range all {
-			if _, ok := rhMap[re]; !ok {
-				resultChan <- re
-			}
-		}
-
-		close(resultChan)
-	}()
-
-	return resultChan
+	return results
 }
 func (this notToken) cost(index Index) int64 { return index.CostAll() + this.right.cost(index) }
 
 type lParenToken struct{}
 
-func (this lParenToken) check(index Index) error                { panic("unreachable") }
-func (this lParenToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
-func (this lParenToken) cost(index Index) int64                 { panic("unreachable") }
+func (this lParenToken) check(index Index) error             { panic("unreachable") }
+func (this lParenToken) eval(index Index) []ResultIdentifier { panic("unreachable") }
+func (this lParenToken) cost(index Index) int64              { panic("unreachable") }
 
 type rParenToken struct{}
 
-func (this rParenToken) check(index Index) error                { panic("unreachable") }
-func (this rParenToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
-func (this rParenToken) cost(index Index) int64                 { panic("unreachable") }
+func (this rParenToken) check(index Index) error             { panic("unreachable") }
+func (this rParenToken) eval(index Index) []ResultIdentifier { panic("unreachable") }
+func (this rParenToken) cost(index Index) int64              { panic("unreachable") }
 
 type virtualToken struct {
 	printable string
@@ -71,7 +66,7 @@ type virtualToken struct {
 }
 
 func (this virtualToken) check(index Index) error { return this.realToken.check(index) }
-func (this virtualToken) eval(index Index) chan ResultIdentifier {
+func (this virtualToken) eval(index Index) []ResultIdentifier {
 	return this.realToken.eval(index)
 }
 func (this virtualToken) cost(index Index) int64 { return this.realToken.cost(index) }
@@ -81,7 +76,7 @@ type tagQueryToken struct {
 }
 
 func (this tagQueryToken) check(index Index) error { return nil }
-func (this tagQueryToken) eval(index Index) chan ResultIdentifier {
+func (this tagQueryToken) eval(index Index) []ResultIdentifier {
 	return index.QueryTagFuzzy(this.tag)
 }
 func (this tagQueryToken) cost(index Index) int64 { return index.CostTagFuzzy(this.tag) }
@@ -91,7 +86,7 @@ type equalsQueryToken struct {
 }
 
 func (this equalsQueryToken) check(index Index) error { return nil }
-func (this equalsQueryToken) eval(index Index) chan ResultIdentifier {
+func (this equalsQueryToken) eval(index Index) []ResultIdentifier {
 	return index.QueryTagExact(this.equals)
 }
 func (this equalsQueryToken) cost(index Index) int64 { return index.CostTagExact(this.equals) }
@@ -112,39 +107,34 @@ func (this andQueryToken) check(index Index) error {
 	}
 	return rhs
 }
-func (this andQueryToken) eval(qindex Index) chan ResultIdentifier {
-	resultChan := make(chan ResultIdentifier)
+func (this andQueryToken) eval(qindex Index) []ResultIdentifier {
+	cheapest := this.left
+	expensive := this.right
 
-	go func() {
-		cheapest := this.left
-		expensive := this.right
+	if this.left.cost(qindex) > this.right.cost(qindex) {
+		cheapest = this.right
+		expensive = this.left
+	}
 
-		if this.left.cost(qindex) > this.right.cost(qindex) {
-			cheapest = this.right
-			expensive = this.left
-		}
+	log.Printf("Evaluating cheapest: %+v", cheapest)
+	cheapResults := cheapest.eval(qindex)
+	cheapestMap := make(map[ResultIdentifier]ResultIdentifier)
 
-		log.Printf("Evaluating cheapest: %+v", cheapest)
-		cheapResults := cheapest.eval(qindex)
-		cheapestMap := make(map[ResultIdentifier]ResultIdentifier)
+	for _, re := range cheapResults {
+		cheapestMap[re] = re
+	}
 
-		for re := range cheapResults {
-			cheapestMap[re] = re
-		}
+	// create a new (filtered) index ...
+	nindex := qindex.CreateFilteredIndex(cheapestMap)
 
-		// create a new (filtered) index ...
-		nindex := qindex.CreateFilteredIndex(cheapestMap)
-
-		// and use it to evaluate the expensive side (already filtered, by the cheaper side)
-		log.Printf("Evaluating expensive side: %+v -- with filtered index (%d filtered)", expensive, len(cheapestMap))
-		expensiveResults := expensive.eval(nindex)
-		for re := range expensiveResults {
-			resultChan <- re
-		}
-		close(resultChan)
-	}()
-
-	return resultChan
+	// and use it to evaluate the expensive side (already filtered, by the cheaper side)
+	log.Printf("Evaluating expensive side: %+v -- with filtered index (%d filtered)", expensive, len(cheapestMap))
+	expensiveResults := expensive.eval(nindex)
+	results := make([]ResultIdentifier, 0, len(cheapResults))
+	for _, re := range expensiveResults {
+		results = append(results, re)
+	}
+	return results
 }
 func (this andQueryToken) cost(index Index) int64 {
 	return int64(math.Min(float64(this.left.cost(index)), float64(this.right.cost(index))))
@@ -164,30 +154,25 @@ func (this orQueryToken) check(index Index) error {
 	}
 	return rhs
 }
-func (this orQueryToken) eval(index Index) chan ResultIdentifier {
-	resultChan := make(chan ResultIdentifier)
-
+func (this orQueryToken) eval(index Index) []ResultIdentifier {
 	var wg sync.WaitGroup
+	wg.Add(2)
 
-	drain := func(qt queryToken) {
-		res := qt.eval(index)
-		for v := range res {
-			resultChan <- v
-		}
-		wg.Done()
-	}
-
+	leftRes := []ResultIdentifier{}
+	rightRes := []ResultIdentifier{}
 	go func() {
-		wg.Add(2)
-
-		go drain(this.left)
-		go drain(this.right)
-
-		wg.Wait()
-		close(resultChan)
+		leftRes = this.left.eval(index)
+		wg.Done()
+	}()
+	go func() {
+		rightRes = this.right.eval(index)
+		wg.Done()
 	}()
 
-	return resultChan
+	wg.Wait()
+
+	leftRes = append(leftRes, rightRes...)
+	return leftRes
 }
 func (this orQueryToken) cost(index Index) int64 {
 	return this.left.cost(index) + this.right.cost(index)
@@ -196,36 +181,32 @@ func (this orQueryToken) cost(index Index) int64 {
 // ':'
 type colonToken struct{}
 
-func (this colonToken) check(index Index) error                { panic("unreachable") }
-func (this colonToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
-func (this colonToken) cost(index Index) int64                 { panic("unreachable") }
+func (this colonToken) check(index Index) error             { panic("unreachable") }
+func (this colonToken) eval(index Index) []ResultIdentifier { panic("unreachable") }
+func (this colonToken) cost(index Index) int64              { panic("unreachable") }
 
 // given a query like: 'year:2004', return all entries type-tagged with 'year'.
 // this can then be filtered later.
-func matchingTagsOfType(index Index, ofType queryToken, tagQueryFunc func(ResultIdentifier, string, string) bool) chan ResultIdentifier {
-	resultChan := make(chan ResultIdentifier)
+func matchingTagsOfType(index Index, ofType queryToken, tagQueryFunc func(ResultIdentifier, string, string) bool) []ResultIdentifier {
+	results := make([]ResultIdentifier, 0, 100)
 
-	go func() {
-		searchFor := ""
-		switch ofTyped := ofType.(type) {
-		case tagQueryToken:
-			// ### should have a way to query the index for whether or not this
-			// is a valid typed search
-			searchFor = ofTyped.tag
+	searchFor := ""
+	switch ofTyped := ofType.(type) {
+	case tagQueryToken:
+		// ### should have a way to query the index for whether or not this
+		// is a valid typed search
+		searchFor = ofTyped.tag
+	}
+	log.Printf("Querying for typed tags of type %s", searchFor)
+
+	for _, typedRe := range index.QueryTypedTags(searchFor) {
+		if tagQueryFunc(typedRe.ID, searchFor, typedRe.TypeValue) {
+			results = append(results, typedRe.ID)
 		}
-		log.Printf("Querying for typed tags of type %s", searchFor)
+	}
 
-		for typedRe := range index.QueryTypedTags(searchFor) {
-			if tagQueryFunc(typedRe.ID, searchFor, typedRe.TypeValue) {
-				resultChan <- typedRe.ID
-			}
-		}
-
-		log.Printf("Done querying for typed tags of type %s", searchFor)
-		close(resultChan)
-	}()
-
-	return resultChan
+	log.Printf("Done querying for typed tags of type %s", searchFor)
+	return results
 }
 
 func numericRightHandSide(rightHand queryToken) (int64, error) {
@@ -267,7 +248,7 @@ func (this equalToToken) check(index Index) error {
 	return err
 }
 
-func (this equalToToken) eval(index Index) chan ResultIdentifier {
+func (this equalToToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
 	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
 		val, err := strconv.Atoi(tagSuffix)
@@ -303,7 +284,7 @@ func (this lessThanToken) check(index Index) error {
 	_, err := numericRightHandSide(this.right)
 	return err
 }
-func (this lessThanToken) eval(index Index) chan ResultIdentifier {
+func (this lessThanToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
 	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
 		val, err := strconv.Atoi(tagSuffix)
@@ -324,16 +305,16 @@ func (this lessThanToken) cost(index Index) int64 {
 // '^'
 type startsWithToken struct{}
 
-func (this startsWithToken) check(index Index) error                { panic("unreachable") }
-func (this startsWithToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
-func (this startsWithToken) cost(index Index) int64                 { panic("unreachable") }
+func (this startsWithToken) check(index Index) error             { panic("unreachable") }
+func (this startsWithToken) eval(index Index) []ResultIdentifier { panic("unreachable") }
+func (this startsWithToken) cost(index Index) int64              { panic("unreachable") }
 
 // '$'
 type endsWithToken struct{}
 
-func (this endsWithToken) check(index Index) error                { panic("unreachable") }
-func (this endsWithToken) eval(index Index) chan ResultIdentifier { panic("unreachable") }
-func (this endsWithToken) cost(index Index) int64                 { panic("unreachable") }
+func (this endsWithToken) check(index Index) error             { panic("unreachable") }
+func (this endsWithToken) eval(index Index) []ResultIdentifier { panic("unreachable") }
+func (this endsWithToken) cost(index Index) int64              { panic("unreachable") }
 
 // '>'
 type greaterThanToken struct {
@@ -353,7 +334,7 @@ func (this greaterThanToken) check(index Index) error {
 	_, err := numericRightHandSide(this.right)
 	return err
 }
-func (this greaterThanToken) eval(index Index) chan ResultIdentifier {
+func (this greaterThanToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
 	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
 		val, err := strconv.Atoi(tagSuffix)
@@ -389,7 +370,7 @@ func (this lessThanEqualToken) check(index Index) error {
 	_, err := numericRightHandSide(this.right)
 	return err
 }
-func (this lessThanEqualToken) eval(index Index) chan ResultIdentifier {
+func (this lessThanEqualToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
 	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
 		val, err := strconv.Atoi(tagSuffix)
@@ -425,7 +406,7 @@ func (this greaterThanEqualToken) check(index Index) error {
 	_, err := numericRightHandSide(this.right)
 	return err
 }
-func (this greaterThanEqualToken) eval(index Index) chan ResultIdentifier {
+func (this greaterThanEqualToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
 	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
 		val, err := strconv.Atoi(tagSuffix)

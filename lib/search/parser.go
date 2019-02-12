@@ -373,7 +373,7 @@ func (this *searchQuery) parse(greedy bool) (queryToken, error) {
 }
 
 // ### member function on searchQuery might make sense
-func Evaluate(searchQuery *searchQuery, index Index) (chan ResultIdentifier, error) {
+func Evaluate(searchQuery *searchQuery, index Index) ([]ResultIdentifier, error) {
 	var err error
 	searchQuery.queryRoot, err = searchQuery.parse(true)
 	if err != nil {

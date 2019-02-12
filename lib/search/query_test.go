@@ -18,7 +18,7 @@ func queryNoError(t *testing.T, q string) resultSet {
 	}
 
 	var rs resultSet = make(resultSet, 0)
-	for r := range rchan {
+	for _, r := range rchan {
 		rs = append(rs, r)
 	}
 
@@ -41,62 +41,56 @@ func (this *testIndex) shouldFilter(id ResultIdentifier) bool {
 	return false
 }
 
-func (this *testIndex) sendIfUnfiltered(id ResultIdentifier, ch chan ResultIdentifier) {
+func (this *testIndex) sendIfUnfiltered(id ResultIdentifier, ch *[]ResultIdentifier) {
 	if !this.shouldFilter(id) {
-		ch <- id
+		*ch = append(*ch, id)
 	}
 }
 
-func (this *testIndex) QueryAll() chan ResultIdentifier {
-	ch := make(chan ResultIdentifier)
-	go func() {
-		this.sendIfUnfiltered(0, ch)
-		this.sendIfUnfiltered(1, ch)
-		this.sendIfUnfiltered(2, ch)
-		this.sendIfUnfiltered(3, ch)
-		this.sendIfUnfiltered(4, ch)
-		close(ch)
-	}()
+func (this *testIndex) QueryAll() []ResultIdentifier {
+	ch := []ResultIdentifier{}
+	this.sendIfUnfiltered(0, &ch)
+	this.sendIfUnfiltered(1, &ch)
+	this.sendIfUnfiltered(2, &ch)
+	this.sendIfUnfiltered(3, &ch)
+	this.sendIfUnfiltered(4, &ch)
 	return ch
 }
 
-func (this *testIndex) QueryTagExact(tag string) chan ResultIdentifier {
-	ch := make(chan ResultIdentifier)
-	go func() {
-		switch {
-		case tag == "0":
-			this.sendIfUnfiltered(0, ch)
-		case tag == "1":
-			this.sendIfUnfiltered(1, ch)
-		case tag == "2":
-			this.sendIfUnfiltered(2, ch)
-		case tag == "3":
-			this.sendIfUnfiltered(3, ch)
-		case tag == "4":
-			this.sendIfUnfiltered(4, ch)
-		case tag == "undertwo":
-			this.sendIfUnfiltered(0, ch)
-			this.sendIfUnfiltered(1, ch)
-		case tag == "abovetwo":
-			this.sendIfUnfiltered(3, ch)
-			this.sendIfUnfiltered(4, ch)
-		case tag == "all":
-			this.sendIfUnfiltered(0, ch)
-			this.sendIfUnfiltered(1, ch)
-			this.sendIfUnfiltered(2, ch)
-			this.sendIfUnfiltered(3, ch)
-			this.sendIfUnfiltered(4, ch)
-		}
-		close(ch)
-	}()
+func (this *testIndex) QueryTagExact(tag string) []ResultIdentifier {
+	ch := []ResultIdentifier{}
+	switch {
+	case tag == "0":
+		this.sendIfUnfiltered(0, &ch)
+	case tag == "1":
+		this.sendIfUnfiltered(1, &ch)
+	case tag == "2":
+		this.sendIfUnfiltered(2, &ch)
+	case tag == "3":
+		this.sendIfUnfiltered(3, &ch)
+	case tag == "4":
+		this.sendIfUnfiltered(4, &ch)
+	case tag == "undertwo":
+		this.sendIfUnfiltered(0, &ch)
+		this.sendIfUnfiltered(1, &ch)
+	case tag == "abovetwo":
+		this.sendIfUnfiltered(3, &ch)
+		this.sendIfUnfiltered(4, &ch)
+	case tag == "all":
+		this.sendIfUnfiltered(0, &ch)
+		this.sendIfUnfiltered(1, &ch)
+		this.sendIfUnfiltered(2, &ch)
+		this.sendIfUnfiltered(3, &ch)
+		this.sendIfUnfiltered(4, &ch)
+	}
 	return ch
 }
 
-func (this *testIndex) QueryTagFuzzy(tag string) chan ResultIdentifier {
+func (this *testIndex) QueryTagFuzzy(tag string) []ResultIdentifier {
 	return this.QueryTagExact(tag)
 }
 
-func (this *testIndex) QueryTypedTags(tagType string) chan TypedResult {
+func (this *testIndex) QueryTypedTags(tagType string) []TypedResult {
 	return nil
 }
 
