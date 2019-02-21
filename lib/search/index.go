@@ -9,7 +9,7 @@ type ResultIdentifier int64
 // For instance, if you make a type query of 'year', then you will get back a
 // result of '2007' if a document has been tagged with a value of 2007 for year.
 type TypedResult struct {
-	TypeValue string
+	TypeValue interface{}
 	ID        ResultIdentifier
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"strconv"
 	"sync"
 )
 
@@ -187,7 +186,7 @@ func (this colonToken) cost(index Index) int64              { panic("unreachable
 
 // given a query like: 'year:2004', return all entries type-tagged with 'year'.
 // this can then be filtered later.
-func matchingTagsOfType(index Index, ofType queryToken, tagQueryFunc func(ResultIdentifier, string, string) bool) []ResultIdentifier {
+func matchingTagsOfType(index Index, ofType queryToken, tagQueryFunc func(ResultIdentifier, string, interface{}) bool) []ResultIdentifier {
 	results := make([]ResultIdentifier, 0, 100)
 
 	searchFor := ""
@@ -250,10 +249,10 @@ func (this equalToToken) check(index Index) error {
 
 func (this equalToToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
-	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
-		val, err := strconv.Atoi(tagSuffix)
-		if err != nil {
-			log.Printf("Non-numeric tag suffix: %s on tag %s entry %d (%s)", tagSuffix, tag, re, err)
+	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag string, tagValue interface{}) bool {
+		val, ok := tagValue.(int)
+		if !ok {
+			log.Printf("Non-numeric tag suffix: %v on tag %s entry %d", tagValue, tag, re)
 			return false
 		}
 		if int64(val) == wantedVal {
@@ -286,10 +285,10 @@ func (this lessThanToken) check(index Index) error {
 }
 func (this lessThanToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
-	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
-		val, err := strconv.Atoi(tagSuffix)
-		if err != nil {
-			log.Printf("Non-numeric tag suffix: %s on tag %s entry %d (%s)", tagSuffix, tag, re, err)
+	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag string, tagValue interface{}) bool {
+		val, ok := tagValue.(int)
+		if !ok {
+			log.Printf("Non-numeric tag suffix: %v on tag %s entry %d", tagValue, tag, re)
 			return false
 		}
 		if int64(val) < wantedVal {
@@ -336,10 +335,10 @@ func (this greaterThanToken) check(index Index) error {
 }
 func (this greaterThanToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
-	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
-		val, err := strconv.Atoi(tagSuffix)
-		if err != nil {
-			log.Printf("Non-numeric tag suffix: %s on tag %s entry %d (%s)", tagSuffix, tag, re, err)
+	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag string, tagValue interface{}) bool {
+		val, ok := tagValue.(int)
+		if !ok {
+			log.Printf("Non-numeric tag suffix: %v on tag %s entry %d", tagValue, tag, re)
 			return false
 		}
 		if int64(val) > wantedVal {
@@ -372,10 +371,10 @@ func (this lessThanEqualToken) check(index Index) error {
 }
 func (this lessThanEqualToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
-	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
-		val, err := strconv.Atoi(tagSuffix)
-		if err != nil {
-			log.Printf("Non-numeric tag suffix: %s on tag %s entry %d (%s)", tagSuffix, tag, re, err)
+	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag string, tagValue interface{}) bool {
+		val, ok := tagValue.(int)
+		if !ok {
+			log.Printf("Non-numeric tag suffix: %v on tag %s entry %d", tagValue, tag, re)
 			return false
 		}
 		if int64(val) <= wantedVal {
@@ -408,10 +407,10 @@ func (this greaterThanEqualToken) check(index Index) error {
 }
 func (this greaterThanEqualToken) eval(index Index) []ResultIdentifier {
 	wantedVal, _ := numericRightHandSide(this.right)
-	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag, tagSuffix string) bool {
-		val, err := strconv.Atoi(tagSuffix)
-		if err != nil {
-			log.Printf("Non-numeric tag suffix: %s on tag %s entry %d (%s)", tagSuffix, tag, re, err)
+	return matchingTagsOfType(index, this.left, func(re ResultIdentifier, tag string, tagValue interface{}) bool {
+		val, ok := tagValue.(int)
+		if !ok {
+			log.Printf("Non-numeric tag suffix: %v on tag %s entry %d", tagValue, tag, re)
 			return false
 		}
 		if int64(val) >= wantedVal {
