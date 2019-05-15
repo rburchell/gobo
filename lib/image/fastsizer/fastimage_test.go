@@ -20,6 +20,19 @@ func BenchmarkJpeg(b *testing.B) {
 	f.Close()
 }
 
+func BenchmarkJpegInfo(b *testing.B) {
+	f, err := os.Open("test.jpg")
+	if err != nil {
+		panic(fmt.Sprintf("error loading: %s", err))
+	}
+	fi := NewFastSizer()
+	for i := 0; i < b.N; i++ {
+		f.Seek(0, io.SeekStart)
+		fi.DetectInfo(f)
+	}
+	f.Close()
+}
+
 /*
 
 import (
