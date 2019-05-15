@@ -5,6 +5,13 @@ import (
 	"io"
 )
 
+type ImageInfo struct {
+	Size     ImageSize
+	Type     ImageType
+	Rotation int
+	Mirror   MirrorDirection
+}
+
 // FastImage instance needs to be initialized before use
 type FastImage struct {
 	tb             []byte
@@ -17,20 +24,33 @@ func NewFastSizer() *FastImage {
 }
 
 type decoder struct {
-	reader *xbuffer
+	reader  *xbuffer
+	minimal bool
 }
 
 //Detect image type and size
 func (this *FastImage) Detect(reader io.Reader) (ImageType, ImageSize, error) {
 	this.internalBuffer = this.internalBuffer[0:0]
-	d := &decoder{reader: newXbuffer(reader, this.internalBuffer)}
+	d := &decoder{
+		reader:  newXbuffer(reader, this.internalBuffer),
+		minimal: true,
+	}
+	info, err := this.detectInternal(d, reader)
+	return info.Type, info.Size, err
+}
 
-	var t ImageType
-	var s ImageSize
+func (this *FastImage) DetectInfo(reader io.Reader) (ImageInfo, error) {
+	this.internalBuffer = this.internalBuffer[0:0]
+	d := &decoder{reader: newXbuffer(reader, this.internalBuffer)}
+	return this.detectInternal(d, reader)
+}
+
+func (this *FastImage) detectInternal(d *decoder, reader io.Reader) (ImageInfo, error) {
+	var info ImageInfo
 	var e error
 
 	if _, err := d.reader.ReadAt(this.tb, 0); err != nil {
-		return Unknown, ImageSize{}, err
+		return info, err
 	}
 
 	ok := false
@@ -39,50 +59,50 @@ func (this *FastImage) Detect(reader io.Reader) (ImageType, ImageSize, error) {
 	case 'B':
 		switch this.tb[1] {
 		case 'M':
-			t = BMP
-			s, e = d.getBMPImageSize()
+			info.Type = BMP
+			info.Size, e = d.getBMPImageSize()
 			ok = true
 		}
 	case 0x47:
 		switch this.tb[1] {
 		case 0x49:
-			t = GIF
-			s, e = d.getGIFImageSize()
+			info.Type = GIF
+			info.Size, e = d.getGIFImageSize()
 			ok = true
 		}
 	case 0xFF:
 		switch this.tb[1] {
 		case 0xD8:
-			t = JPEG
-			s, e = d.getJPEGImageSize()
+			info.Type = JPEG
+			e = d.getJPEGInfo(&info)
 			ok = true
 		}
 	case 0x89:
 		switch this.tb[1] {
 		case 0x50:
-			t = PNG
-			s, e = d.getPNGImageSize()
+			info.Type = PNG
+			info.Size, e = d.getPNGImageSize()
 			ok = true
 		}
 	case 'I':
 		switch this.tb[1] {
 		case 'I':
-			t = TIFF
-			s, e = d.getTIFFImageSize()
+			info.Type = TIFF
+			info.Size, e = d.getTIFFImageSize()
 			ok = true
 		}
 	case 'M':
 		switch this.tb[1] {
 		case 'M':
-			t = TIFF
-			s, e = d.getTIFFImageSize()
+			info.Type = TIFF
+			info.Size, e = d.getTIFFImageSize()
 			ok = true
 		}
 	case 'R':
 		switch this.tb[1] {
 		case 'I':
-			t = WEBP
-			s, e = d.getWEBPImageSize()
+			info.Type = WEBP
+			info.Size, e = d.getWEBPImageSize()
 			ok = true
 		}
 	}
@@ -90,7 +110,7 @@ func (this *FastImage) Detect(reader io.Reader) (ImageType, ImageSize, error) {
 	this.internalBuffer = d.reader.buf
 
 	if !ok {
-		return Unknown, ImageSize{}, fmt.Errorf("Unknown image type (%v)", this.tb)
+		return info, fmt.Errorf("Unknown image type (%v)", this.tb)
 	}
-	return t, s, e
+	return info, e
 }
