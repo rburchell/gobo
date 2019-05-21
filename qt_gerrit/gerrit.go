@@ -46,13 +46,13 @@ type GerritMessage struct {
 		Project string       `json:"project"`       // qt/qtdeclarative
 		Branch  string       `json:"branch"`        // 5.6
 		Id      string       `json:"id"`            // Icefdec91b012b12728367fd54b4d16796233ee12
-		Number  int64        `json:"number,string"` // 125617
+		Number  int64        `json:"number"`        // 125617
 		Subject string       `json:"subject"`       // Make QML composite types inherit enums
 		Owner   GerritPerson `json:"owner"`
 		Url     string       `json:"url"` // https://codereview.qt-project.org/125617
 	} `json:"change"`
 	PatchSet struct {
-		Number         int64        `json:"number,string"` // 9
+		Number         int64        `json:"number"`        // 9
 		Revision       string       `json:"revision"`      // 52c9ebcd78379b0eacc1476237720e06abf286b3
 		Parents        []string     `json:"parents"`       // ["9688aa4fe3195147881dc0969bf000bfc8a65e5e"]
 		Ref            string       `json:"ref"`           // refs/changes/17/125617/9
