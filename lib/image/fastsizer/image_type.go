@@ -19,13 +19,15 @@ const (
 	TIFF
 	// WEBP represendts a WEBP image
 	WEBP
+	// HEIF represents a HEIF image
+	HEIF
 	// Unknown represents an unknown image type
 	Unknown
 )
 
-const imagetypename = "GIFPNGJPEGBMPTIFFWEBPUnknown"
+const imagetypename = "GIFPNGJPEGBMPTIFFWEBPHEIFUnknown"
 
-var imagetypeindex = [...]uint8{0, 3, 6, 10, 13, 17, 21, 28}
+var imagetypeindex = [...]uint8{0, 3, 6, 10, 13, 17, 21, 25, 32}
 
 func (i ImageType) String() string {
 	if i+1 >= ImageType(len(imagetypeindex)) {

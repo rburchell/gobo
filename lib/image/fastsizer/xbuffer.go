@@ -7,6 +7,7 @@ import (
 type xbuffer struct {
 	r   io.Reader
 	buf []byte
+	off int
 }
 
 func (b *xbuffer) fill(end int) error {
@@ -26,9 +27,11 @@ func (b *xbuffer) fill(end int) error {
 		if n, err := io.ReadFull(b.r, b.buf[m:end]); err != nil {
 			end = m + n
 			b.buf = b.buf[:end]
+			b.off = end
 			return err
 		}
 	}
+	b.off = end
 	return nil
 }
 
@@ -52,7 +55,7 @@ func (b *xbuffer) Slice(off, n int) ([]byte, error) {
 }
 
 func (b *xbuffer) ReadByte() (byte, error) {
-	current := len(b.buf)
+	current := b.off
 	if err := b.fill(current + 1); err != nil {
 		return 0, err
 	}
@@ -60,7 +63,7 @@ func (b *xbuffer) ReadByte() (byte, error) {
 }
 
 func (b *xbuffer) ReadBytes(n int) ([]byte, error) {
-	current := len(b.buf)
+	current := b.off
 	if err := b.fill(current + n); err != nil {
 		return nil, err
 	}
@@ -68,7 +71,7 @@ func (b *xbuffer) ReadBytes(n int) ([]byte, error) {
 }
 
 func (b *xbuffer) ReadFull(p []byte) (int, error) {
-	o := len(b.buf)
+	o := b.off
 	end := o + len(p)
 
 	err := b.fill(end)

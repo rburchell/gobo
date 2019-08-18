@@ -1,8 +1,10 @@
 package fastsizer
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"log"
 )
 
 type ImageInfo struct {
@@ -103,6 +105,20 @@ func (this *FastImage) detectInternal(d *decoder, reader io.Reader) (ImageInfo, 
 		case 'I':
 			info.Type = WEBP
 			info.Size, e = d.getWEBPImageSize()
+			ok = true
+		}
+	default:
+		hdr := make([]byte, 12)
+		if _, err := d.reader.ReadAt(hdr, 0); err != nil {
+			e = err
+			break
+		}
+
+		log.Printf("magic: %+v", hdr[4:11])
+		if bytes.Equal(hdr[4:11], []byte("ftyphei")) {
+			d.reader.off = 0
+			info.Type = HEIF
+			info.Size, e = d.getHEIFImageSize()
 			ok = true
 		}
 	}
