@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "main";
+
+message PlaybackHeader {
+	uint32 magic = 1;
+	float testfloat = 2;
+	double testdouble = 3;
+}
+
+message PlaybackFile {
+	PlaybackHeader header = 1;
+	bytes body = 2;
+}
