@@ -1,16 +1,8 @@
 package main
 
-import "fmt"
-
-type wireType int
-
-// These match up with the protobuf wiretypes.
-// That's also why they are not sequential.
-const (
-	varInt          wireType = 0
-	fixed64         wireType = 1
-	lengthDelimited wireType = 2
-	fixed32                  = 5
+import (
+	"fmt"
+	"github.com/rburchell/gobo/lib/proto_parser"
 )
 
 func preamble() {
@@ -26,7 +18,7 @@ enum class WireType {
 	LengthDelimited = %d,
 	Fixed32 = %d,
 };
-`, varInt, fixed64, lengthDelimited, fixed32)
+`, proto_parser.VarIntWireType, proto_parser.Fixed64WireType, proto_parser.LengthDelimitedWireType, proto_parser.Fixed32WireType)
 
 	fmt.Printf(`
 struct VarInt

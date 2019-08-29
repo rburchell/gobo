@@ -164,6 +164,33 @@ type MessageField struct {
 	FieldNumber int
 	IsRepeated  bool
 }
+
+// Return the protobuf wiretype for a field.
+func (this MessageField) WireType() WireType {
+	switch this.Type {
+	case "uint64":
+		return VarIntWireType
+	case "int64":
+		return VarIntWireType
+	case "uint32":
+		return VarIntWireType
+	case "int32":
+		return VarIntWireType
+	case "float":
+		return Fixed32WireType
+	case "double":
+		return Fixed64WireType
+	case "bytes":
+		return LengthDelimitedWireType
+	case "string":
+		return LengthDelimitedWireType
+	}
+
+	// This is some kind of custom field (or we just don't know about it yet).
+	// TODO: handle bool, etc.
+	return LengthDelimitedWireType
+}
+
 type Message struct {
 	Type   string
 	Fields []MessageField

@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/rburchell/gobo/lib/proto_parser"
-	"log"
 )
 
+// Return the C++ type for a given protobuf type.
+// If the type is not a built-in type (i.e. it's a reference to another type),
+// then return empty string.
 func mapTypeToCppType(typeName string) string {
 	// ### XXX: not exhaustive
 	switch typeName {
@@ -28,31 +30,6 @@ func mapTypeToCppType(typeName string) string {
 	}
 
 	return ""
-}
-
-func wireTypeForField(typeName string) wireType {
-	switch typeName {
-	case "uint64":
-		return varInt
-	case "int64":
-		return varInt
-	case "uint32":
-		return varInt
-	case "int32":
-		return varInt
-	case "float":
-		return fixed32
-	case "double":
-		return fixed64
-	case "bytes":
-		return lengthDelimited
-	case "string":
-		return lengthDelimited
-	}
-
-	// TODO: read known types and make sure it's one of them.
-	log.Printf("Unknown type: %s", typeName)
-	return lengthDelimited
 }
 
 func genTypes(types []proto_parser.Message) {
@@ -93,25 +70,25 @@ func genTypes(types []proto_parser.Message) {
 		fmt.Printf("    StreamWriter stream;\n")
 		fmt.Printf("    VarInt ftd;\n")
 		for _, field := range message.Fields {
-			wt := wireTypeForField(field.Type)
+			wt := field.WireType()
 			//fmt.Printf("    std::cout << \"Wrote field type and number \" << %d << %d << std::endl;\n", field.FieldNumber, wt)
 			fmt.Printf("    ftd.v = ((%d << 3) | %d);\n", field.FieldNumber, wt)
 			fmt.Printf("    stream.write(ftd);\n")
 			switch wt {
-			case varInt:
+			case proto_parser.VarIntWireType:
 				fmt.Printf("    {\n")
 				fmt.Printf("        VarInt vi;\n")
 				fmt.Printf("        vi.v = t.%s();\n", field.DisplayName)
 				fmt.Printf("        stream.write(vi);\n")
 				fmt.Printf("    }\n")
-			case fixed64:
+			case proto_parser.Fixed64WireType:
 				fmt.Printf("    {\n")
 				fmt.Printf("        Fixed64 f64;\n")
 				fmt.Printf("        auto tmp = t.%s();\n", field.DisplayName)
 				fmt.Printf("        memcpy(&f64.v, &tmp, sizeof(f64.v));\n")
 				fmt.Printf("        stream.write(f64);\n")
 				fmt.Printf("    }\n")
-			case lengthDelimited:
+			case proto_parser.LengthDelimitedWireType:
 				fmt.Printf("    {\n")
 				fmt.Printf("        LengthDelimited ld;\n")
 				// We just assume that it contains valid UTF8.
@@ -125,7 +102,7 @@ func genTypes(types []proto_parser.Message) {
 				}
 				fmt.Printf("        stream.write(ld);\n")
 				fmt.Printf("    }\n")
-			case fixed32:
+			case proto_parser.Fixed32WireType:
 				fmt.Printf("    {\n")
 				fmt.Printf("        Fixed32 f32;\n")
 				fmt.Printf("        auto tmp = t.%s();\n", field.DisplayName)
@@ -176,12 +153,12 @@ func genTypes(types []proto_parser.Message) {
 		fmt.Printf("        switch (fieldNumber) {\n")
 		for _, field := range message.Fields {
 			fmt.Printf("        case %d:\n", field.FieldNumber)
-			switch wireTypeForField(field.Type) {
-			case varInt:
+			switch field.WireType() {
+			case proto_parser.VarIntWireType:
 				fmt.Printf("            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
-			case fixed64:
+			case proto_parser.Fixed64WireType:
 				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
-			case lengthDelimited:
+			case proto_parser.LengthDelimitedWireType:
 				t := mapTypeToCppType(field.Type)
 				if t == "" {
 					// message type
@@ -193,7 +170,7 @@ func genTypes(types []proto_parser.Message) {
 				} else {
 					fmt.Printf("            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 				}
-			case fixed32:
+			case proto_parser.Fixed32WireType:
 				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			default:
 				panic("boom")
