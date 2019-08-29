@@ -193,7 +193,7 @@ inline void StreamReader::read(Fixed64& t)
 		 (static_cast<uint32_t>(readb()) << 8) |
 		 (static_cast<uint32_t>(readb()) << 16) |
 		 (static_cast<uint32_t>(readb()) << 24);
-	t.v = static_cast<uint64_t>(p1) | static_cast<uint64_t>(p2);
+	t.v = static_cast<uint64_t>(p1) | (static_cast<uint64_t>(p2) << 32);
 }
 
 `)
