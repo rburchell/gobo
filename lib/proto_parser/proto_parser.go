@@ -5,16 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
-	"strings"
 )
 
 // message Foo {
 //   type foo = 1;
 // }
 func isWhitespace(c byte) bool {
-	return c == ' ' || c == '\t'
+	return c == ' ' || c == '\t' || c == '\n'
 }
 
 func isAlphaNum(c byte) bool {
@@ -29,8 +27,23 @@ func isAlphaNum(c byte) bool {
 	return false
 }
 
-func parseLine(line string) []string {
-	scanner := bufio.NewScanner(strings.NewReader(line))
+func cleanTokens(tokens []string) []string {
+	cleanTokens := []string{}
+
+	// remove whitespace to make life easier
+	for _, tok := range tokens {
+		if isWhitespace(tok[0]) {
+			continue
+		}
+		cleanTokens = append(cleanTokens, tok)
+	}
+
+	return cleanTokens
+}
+
+func parseBuffer(buf []byte) []string {
+	scanner := bufio.NewScanner(bytes.NewBuffer(buf))
+	tokens := []string{}
 
 	scanWord := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		var i int
@@ -76,13 +89,14 @@ func parseLine(line string) []string {
 			c := data[i]
 			switch {
 			case c == '"':
+				i++ // also skip the last "
 				done = true
 			default:
 				i++
 			}
 		}
 
-		return i, data[1:i], nil
+		return i, data[1 : i-1], nil
 	}
 
 	split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -96,11 +110,11 @@ func parseLine(line string) []string {
 		case c >= 'A' && c <= 'Z':
 			fallthrough
 		case c >= '0' && c <= '9':
-			return scanWord(data, atEOF)
-		case c == ' ' || c == '\t':
-			return scanWhitespace(data, atEOF)
+			advance, token, err = scanWord(data[advance:], atEOF)
+		case isWhitespace(c):
+			advance, token, err = scanWhitespace(data[advance:], atEOF)
 		case c == '"':
-			return scanStringLiteral(data, atEOF)
+			advance, token, err = scanStringLiteral(data[advance:], atEOF)
 		case c == '{':
 			fallthrough
 		case c == '}':
@@ -108,15 +122,14 @@ func parseLine(line string) []string {
 		case c == ';':
 			fallthrough
 		case c == '=':
-			return 1, []byte{c}, nil
+			advance, token, err = 1, []byte{c}, nil
 		default:
 			log.Printf("WAT: %q", data)
 		}
-		panic("boom")
+
+		return advance, token, err
 	}
 	scanner.Split(split)
-
-	tokens := []string{}
 
 	for scanner.Scan() {
 		tokens = append(tokens, scanner.Text())
@@ -124,33 +137,6 @@ func parseLine(line string) []string {
 
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("Invalid input: %s", err)
-	}
-
-	return tokens
-}
-
-func cleanTokens(tokens []string) []string {
-	cleanTokens := []string{}
-
-	// remove whitespace to make life easier
-	for _, tok := range tokens {
-		if isWhitespace(tok[0]) {
-			continue
-		}
-		cleanTokens = append(cleanTokens, tok)
-	}
-
-	return cleanTokens
-}
-
-func parseBuffer(buf []byte) []string {
-	scanner := bufio.NewScanner(bytes.NewBuffer(buf))
-	tokens := []string{}
-	for scanner.Scan() {
-		tokens = append(tokens, parseLine(scanner.Text())...)
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading buffer:", err)
 	}
 
 	tokens = cleanTokens(tokens)
@@ -200,6 +186,7 @@ type Message struct {
 func ParseTypes(buf []byte) []Message {
 	tokens := parseBuffer(buf)
 	types := []Message{}
+
 	for i := 0; i < len(tokens); {
 		tok := tokens[i]
 		switch tok {
