@@ -110,7 +110,7 @@ func genTypes(types []proto_parser.Message) {
 				fmt.Printf("        stream.write(f32);\n")
 				fmt.Printf("    }\n")
 			default:
-				panic("boom")
+				panic(fmt.Sprintf("Unknown wiretype on encode: %d", wt))
 			}
 		}
 		fmt.Printf("    return stream.buffer();\n")
@@ -173,7 +173,7 @@ func genTypes(types []proto_parser.Message) {
 			case proto_parser.Fixed32WireType:
 				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			default:
-				panic("boom")
+				panic(fmt.Sprintf("Unknown wiretype on decode: %d", field.WireType()))
 			}
 			fmt.Printf("            break;\n")
 		}
