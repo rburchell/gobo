@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/rburchell/gobo/lib/proto_parser"
+	"io"
+	"os"
 )
 
 // Return the C++ type for a given protobuf type.
@@ -32,154 +34,154 @@ func mapTypeToCppType(typeName string) string {
 	return ""
 }
 
-func genTypes(types []proto_parser.Message) {
-	preamble()
+func genTypes(out io.Writer, types []proto_parser.Message) {
+	preamble(out)
 
 	// headers
 	for _, message := range types {
-		fmt.Printf("struct %s\n", message.Type)
-		fmt.Printf("{\n")
+		fmt.Fprintf(out, "struct %s\n", message.Type)
+		fmt.Fprintf(out, "{\n")
 		for _, field := range message.Fields {
 			t := mapTypeToCppType(field.Type)
-			fmt.Printf("public:\n")
+			fmt.Fprintf(out, "public:\n")
 			if t != "" {
-				fmt.Printf("    inline %s %s() const { return m_%s; };\n", t, field.DisplayName, field.DisplayName)
-				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t, field.DisplayName)
+				fmt.Fprintf(out, "    inline %s %s() const { return m_%s; };\n", t, field.DisplayName, field.DisplayName)
+				fmt.Fprintf(out, "    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t, field.DisplayName)
 			} else {
-				fmt.Printf("    inline const %s %s() const { return m_%s; };\n", field.Type, field.DisplayName, field.DisplayName)
-				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
+				fmt.Fprintf(out, "    inline const %s %s() const { return m_%s; };\n", field.Type, field.DisplayName, field.DisplayName)
+				fmt.Fprintf(out, "    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
 			}
-			fmt.Printf("private:\n")
+			fmt.Fprintf(out, "private:\n")
 			if t != "" {
-				fmt.Printf("    %s m_%s;\n", t, field.DisplayName)
+				fmt.Fprintf(out, "    %s m_%s;\n", t, field.DisplayName)
 			} else {
-				fmt.Printf("    %s m_%s;\n", field.Type, field.DisplayName)
+				fmt.Fprintf(out, "    %s m_%s;\n", field.Type, field.DisplayName)
 			}
 		}
-		fmt.Printf("};\n")
+		fmt.Fprintf(out, "};\n")
 
-		fmt.Printf("std::vector<uint8_t> encode(const %s& t);\n", message.Type)
-		fmt.Printf("void decode(const std::vector<uint8_t>& buffer, %s& v);\n", message.Type)
+		fmt.Fprintf(out, "std::vector<uint8_t> encode(const %s& t);\n", message.Type)
+		fmt.Fprintf(out, "void decode(const std::vector<uint8_t>& buffer, %s& v);\n", message.Type)
 	}
 
-	fmt.Printf("\n\n")
+	fmt.Fprintf(out, "\n\n")
 
 	for _, message := range types {
-		fmt.Printf("inline std::vector<uint8_t> encode(const %s& t)\n", message.Type)
-		fmt.Printf("{\n")
-		fmt.Printf("    StreamWriter stream;\n")
-		fmt.Printf("    VarInt ftd;\n")
+		fmt.Fprintf(out, "inline std::vector<uint8_t> encode(const %s& t)\n", message.Type)
+		fmt.Fprintf(out, "{\n")
+		fmt.Fprintf(out, "    StreamWriter stream;\n")
+		fmt.Fprintf(out, "    VarInt ftd;\n")
 		for _, field := range message.Fields {
 			wt := field.WireType()
-			//fmt.Printf("    std::cout << \"Wrote field type and number \" << %d << %d << std::endl;\n", field.FieldNumber, wt)
-			fmt.Printf("    ftd.v = ((%d << 3) | %d);\n", field.FieldNumber, wt)
-			fmt.Printf("    stream.write(ftd);\n")
+			//fmt.Fprintf(out, "    std::cout << \"Wrote field type and number \" << %d << %d << std::endl;\n", field.FieldNumber, wt)
+			fmt.Fprintf(out, "    ftd.v = ((%d << 3) | %d);\n", field.FieldNumber, wt)
+			fmt.Fprintf(out, "    stream.write(ftd);\n")
 			switch wt {
 			case proto_parser.VarIntWireType:
-				fmt.Printf("    {\n")
-				fmt.Printf("        VarInt vi;\n")
-				fmt.Printf("        vi.v = t.%s();\n", field.DisplayName)
-				fmt.Printf("        stream.write(vi);\n")
-				fmt.Printf("    }\n")
+				fmt.Fprintf(out, "    {\n")
+				fmt.Fprintf(out, "        VarInt vi;\n")
+				fmt.Fprintf(out, "        vi.v = t.%s();\n", field.DisplayName)
+				fmt.Fprintf(out, "        stream.write(vi);\n")
+				fmt.Fprintf(out, "    }\n")
 			case proto_parser.Fixed64WireType:
-				fmt.Printf("    {\n")
-				fmt.Printf("        Fixed64 f64;\n")
-				fmt.Printf("        auto tmp = t.%s();\n", field.DisplayName)
-				fmt.Printf("        memcpy(&f64.v, &tmp, sizeof(f64.v));\n")
-				fmt.Printf("        stream.write(f64);\n")
-				fmt.Printf("    }\n")
+				fmt.Fprintf(out, "    {\n")
+				fmt.Fprintf(out, "        Fixed64 f64;\n")
+				fmt.Fprintf(out, "        auto tmp = t.%s();\n", field.DisplayName)
+				fmt.Fprintf(out, "        memcpy(&f64.v, &tmp, sizeof(f64.v));\n")
+				fmt.Fprintf(out, "        stream.write(f64);\n")
+				fmt.Fprintf(out, "    }\n")
 			case proto_parser.LengthDelimitedWireType:
-				fmt.Printf("    {\n")
-				fmt.Printf("        LengthDelimited ld;\n")
+				fmt.Fprintf(out, "    {\n")
+				fmt.Fprintf(out, "        LengthDelimited ld;\n")
 				// We just assume that it contains valid UTF8.
-				fmt.Printf("        auto data = t.%s();\n", field.DisplayName)
+				fmt.Fprintf(out, "        auto data = t.%s();\n", field.DisplayName)
 				t := mapTypeToCppType(field.Type)
 				if t == "" {
 					// message type
-					fmt.Printf("        ld.data = encode(data);\n")
+					fmt.Fprintf(out, "        ld.data = encode(data);\n")
 				} else {
-					fmt.Printf("        ld.data = std::vector<uint8_t>(data.begin(), data.end());\n")
+					fmt.Fprintf(out, "        ld.data = std::vector<uint8_t>(data.begin(), data.end());\n")
 				}
-				fmt.Printf("        stream.write(ld);\n")
-				fmt.Printf("    }\n")
+				fmt.Fprintf(out, "        stream.write(ld);\n")
+				fmt.Fprintf(out, "    }\n")
 			case proto_parser.Fixed32WireType:
-				fmt.Printf("    {\n")
-				fmt.Printf("        Fixed32 f32;\n")
-				fmt.Printf("        auto tmp = t.%s();\n", field.DisplayName)
-				fmt.Printf("        memcpy(&f32.v, &tmp, sizeof(f32.v));\n")
-				fmt.Printf("        stream.write(f32);\n")
-				fmt.Printf("    }\n")
+				fmt.Fprintf(out, "    {\n")
+				fmt.Fprintf(out, "        Fixed32 f32;\n")
+				fmt.Fprintf(out, "        auto tmp = t.%s();\n", field.DisplayName)
+				fmt.Fprintf(out, "        memcpy(&f32.v, &tmp, sizeof(f32.v));\n")
+				fmt.Fprintf(out, "        stream.write(f32);\n")
+				fmt.Fprintf(out, "    }\n")
 			default:
 				panic(fmt.Sprintf("Unknown wiretype on encode: %d", wt))
 			}
 		}
-		fmt.Printf("    return stream.buffer();\n")
-		fmt.Printf("}\n")
-		fmt.Printf("inline void decode(const std::vector<uint8_t>& buffer, %s& t)\n", message.Type)
-		fmt.Printf("{\n")
-		fmt.Printf("    StreamReader stream(buffer);\n")
-		fmt.Printf("    VarInt vi;\n")
-		fmt.Printf("    Fixed64 f64;\n")
-		fmt.Printf("    Fixed32 f32;\n")
-		fmt.Printf("    LengthDelimited ld;\n")
-		fmt.Printf("\n")
-		fmt.Printf("    for (; !stream.is_eof(); ) {\n")
-		fmt.Printf("        stream.start_transaction();\n")
-		fmt.Printf("        VarInt ftd;\n")
-		fmt.Printf("        stream.read(ftd);\n")
-		fmt.Printf("        uint64_t fieldNumber = ftd.v >> 3;\n")
-		fmt.Printf("        uint8_t fieldType = ftd.v & 0x07;\n")
-		fmt.Printf("\n")
-		//fmt.Printf("        std::cout << \"Read field type and number \" << fieldType << fieldNumber << std::endl;\n")
-		fmt.Printf("\n")
-		fmt.Printf("        switch (WireType(fieldType)) {\n")
-		fmt.Printf("        case WireType::VarInt:\n")
-		fmt.Printf("            stream.read(vi);\n")
-		fmt.Printf("            break;\n")
-		fmt.Printf("        case WireType::Fixed64:\n")
-		fmt.Printf("            stream.read(f64);\n")
-		fmt.Printf("            break;\n")
-		fmt.Printf("        case WireType::Fixed32:\n")
-		fmt.Printf("            stream.read(f32);\n")
-		fmt.Printf("            break;\n")
-		fmt.Printf("        case WireType::LengthDelimited:\n")
-		fmt.Printf("            stream.read(ld);\n")
-		fmt.Printf("            break;\n")
-		fmt.Printf("        }\n")
-		fmt.Printf("        if (!stream.commit_transaction()) {\n")
-		fmt.Printf("            break;\n")
-		fmt.Printf("        }\n")
+		fmt.Fprintf(out, "    return stream.buffer();\n")
+		fmt.Fprintf(out, "}\n")
+		fmt.Fprintf(out, "inline void decode(const std::vector<uint8_t>& buffer, %s& t)\n", message.Type)
+		fmt.Fprintf(out, "{\n")
+		fmt.Fprintf(out, "    StreamReader stream(buffer);\n")
+		fmt.Fprintf(out, "    VarInt vi;\n")
+		fmt.Fprintf(out, "    Fixed64 f64;\n")
+		fmt.Fprintf(out, "    Fixed32 f32;\n")
+		fmt.Fprintf(out, "    LengthDelimited ld;\n")
+		fmt.Fprintf(out, "\n")
+		fmt.Fprintf(out, "    for (; !stream.is_eof(); ) {\n")
+		fmt.Fprintf(out, "        stream.start_transaction();\n")
+		fmt.Fprintf(out, "        VarInt ftd;\n")
+		fmt.Fprintf(out, "        stream.read(ftd);\n")
+		fmt.Fprintf(out, "        uint64_t fieldNumber = ftd.v >> 3;\n")
+		fmt.Fprintf(out, "        uint8_t fieldType = ftd.v & 0x07;\n")
+		fmt.Fprintf(out, "\n")
+		//fmt.Fprintf(out, "        std::cout << \"Read field type and number \" << fieldType << fieldNumber << std::endl;\n")
+		fmt.Fprintf(out, "\n")
+		fmt.Fprintf(out, "        switch (WireType(fieldType)) {\n")
+		fmt.Fprintf(out, "        case WireType::VarInt:\n")
+		fmt.Fprintf(out, "            stream.read(vi);\n")
+		fmt.Fprintf(out, "            break;\n")
+		fmt.Fprintf(out, "        case WireType::Fixed64:\n")
+		fmt.Fprintf(out, "            stream.read(f64);\n")
+		fmt.Fprintf(out, "            break;\n")
+		fmt.Fprintf(out, "        case WireType::Fixed32:\n")
+		fmt.Fprintf(out, "            stream.read(f32);\n")
+		fmt.Fprintf(out, "            break;\n")
+		fmt.Fprintf(out, "        case WireType::LengthDelimited:\n")
+		fmt.Fprintf(out, "            stream.read(ld);\n")
+		fmt.Fprintf(out, "            break;\n")
+		fmt.Fprintf(out, "        }\n")
+		fmt.Fprintf(out, "        if (!stream.commit_transaction()) {\n")
+		fmt.Fprintf(out, "            break;\n")
+		fmt.Fprintf(out, "        }\n")
 
-		fmt.Printf("        switch (fieldNumber) {\n")
+		fmt.Fprintf(out, "        switch (fieldNumber) {\n")
 		for _, field := range message.Fields {
-			fmt.Printf("        case %d:\n", field.FieldNumber)
+			fmt.Fprintf(out, "        case %d:\n", field.FieldNumber)
 			switch field.WireType() {
 			case proto_parser.VarIntWireType:
-				fmt.Printf("            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+				fmt.Fprintf(out, "            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 			case proto_parser.Fixed64WireType:
-				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
+				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			case proto_parser.LengthDelimitedWireType:
 				t := mapTypeToCppType(field.Type)
 				if t == "" {
 					// message type
-					fmt.Printf("            {\n")
-					fmt.Printf("            %s td;\n", field.Type)
-					fmt.Printf("            decode(ld.data, td);\n")
-					fmt.Printf("            t.%s(td);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
-					fmt.Printf("            }\n")
+					fmt.Fprintf(out, "            {\n")
+					fmt.Fprintf(out, "            %s td;\n", field.Type)
+					fmt.Fprintf(out, "            decode(ld.data, td);\n")
+					fmt.Fprintf(out, "            t.%s(td);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+					fmt.Fprintf(out, "            }\n")
 				} else {
-					fmt.Printf("            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+					fmt.Fprintf(out, "            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 				}
 			case proto_parser.Fixed32WireType:
-				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
+				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			default:
 				panic(fmt.Sprintf("Unknown wiretype on decode: %d", field.WireType()))
 			}
-			fmt.Printf("            break;\n")
+			fmt.Fprintf(out, "            break;\n")
 		}
-		fmt.Printf("        }\n\n")
-		fmt.Printf("    }\n\n")
-		fmt.Printf("}\n\n")
+		fmt.Fprintf(out, "        }\n\n")
+		fmt.Fprintf(out, "    }\n\n")
+		fmt.Fprintf(out, "}\n\n")
 	}
 }
 
@@ -198,5 +200,5 @@ message PlaybackFile {
 `)
 
 	types := proto_parser.ParseTypes(typeBuf)
-	genTypes(types)
+	genTypes(os.Stdout, types)
 }

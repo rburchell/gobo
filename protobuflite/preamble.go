@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/rburchell/gobo/lib/proto_parser"
+	"io"
 )
 
-func preamble() {
-	fmt.Printf(`
+func preamble(w io.Writer) {
+	fmt.Fprintf(w, `
 #include <cstdint>
 #include <iostream>
 #include <cstring>
@@ -20,7 +21,7 @@ enum class WireType {
 };
 `, proto_parser.VarIntWireType, proto_parser.Fixed64WireType, proto_parser.LengthDelimitedWireType, proto_parser.Fixed32WireType)
 
-	fmt.Printf(`
+	fmt.Fprintf(w, `
 struct VarInt
 {
 	uint64_t v;
