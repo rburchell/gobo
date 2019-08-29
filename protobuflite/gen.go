@@ -305,11 +305,11 @@ func genTypes(types []Message) {
 			t := mapTypeToCppType(field.Type)
 			fmt.Printf("public:\n")
 			if t != "" {
-				fmt.Printf("    %s %s() const { return m_%s; };\n", t, field.DisplayName, field.DisplayName)
-				fmt.Printf("    void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), t, field.DisplayName)
+				fmt.Printf("    inline %s %s() const { return m_%s; };\n", t, field.DisplayName, field.DisplayName)
+				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), t, field.DisplayName)
 			} else {
-				fmt.Printf("    const %s %s() const { return m_%s; };\n", field.Type, field.DisplayName, field.DisplayName)
-				fmt.Printf("    void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
+				fmt.Printf("    inline const %s %s() const { return m_%s; };\n", field.Type, field.DisplayName, field.DisplayName)
+				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
 			}
 			fmt.Printf("private:\n")
 			if t != "" {
@@ -327,7 +327,7 @@ func genTypes(types []Message) {
 	fmt.Printf("\n\n")
 
 	for _, message := range types {
-		fmt.Printf("std::vector<uint8_t> encode(const %s& t)\n", message.Type)
+		fmt.Printf("inline std::vector<uint8_t> encode(const %s& t)\n", message.Type)
 		fmt.Printf("{\n")
 		fmt.Printf("    StreamWriter stream;\n")
 		fmt.Printf("    VarInt ftd;\n")
@@ -377,7 +377,7 @@ func genTypes(types []Message) {
 		}
 		fmt.Printf("    return stream.buffer();\n")
 		fmt.Printf("}\n")
-		fmt.Printf("void decode(const std::vector<uint8_t>& buffer, %s& t)\n", message.Type)
+		fmt.Printf("inline void decode(const std::vector<uint8_t>& buffer, %s& t)\n", message.Type)
 		fmt.Printf("{\n")
 		fmt.Printf("    StreamReader stream(buffer);\n")
 		fmt.Printf("    VarInt vi;\n")
@@ -443,35 +443,6 @@ func genTypes(types []Message) {
 		fmt.Printf("    }\n\n")
 		fmt.Printf("}\n\n")
 	}
-
-	fmt.Printf(`
-
-int main(int argc, char **argv) {
-	PlaybackHeader header;
-	header.setMagic(1010);
-	header.setTestfloat(1.234);
-	header.setTestdouble(5.678);
-
-	PlaybackFile pf;
-	pf.setHeader(header);
-	pf.setBody("hello world");
-
-	std::vector<uint8_t> data = encode(pf);
-	FILE* f = fopen("stream.out", "wb");
-	if (f == nullptr) {
-		perror("open");
-		exit(1);
-	}
-	fwrite(data.data(), data.size(), 1, f);
-	fclose(f);
-
-	{
-		PlaybackFile pf2;
-		decode(data, pf2);
-		printf("Read: %%d %%s %%f %%f\n", pf2.header().magic(), pf2.body().data(), pf2.header().testfloat(), pf2.header().testdouble());
-	}
-}
-`)
 }
 
 func main() {

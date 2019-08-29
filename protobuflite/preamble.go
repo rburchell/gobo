@@ -63,38 +63,55 @@ private:
 class StreamReader
 {
 public:
-	StreamReader(const std::vector<uint8_t>& buffer) : m_buffer(buffer) {}
+	StreamReader(const std::vector<uint8_t>& buffer);
 	void read(VarInt& v);
 	void read(LengthDelimited& v);
 	void read(Fixed64& v);
 	void read(Fixed32& v);
-	std::vector<uint8_t> buffer() const { return m_buffer; }
-	bool is_eof() const { return m_pos >= m_buffer.size(); }
-	void start_transaction() { m_pos_stack.push_back(m_pos); }
-	bool commit_transaction()
-	{
-		if (m_pos > m_buffer.size()) {
-			m_pos = m_pos_stack.back();
-			return false;
-		} else {
-			m_pos_stack.pop_back();
-			return true;
-		}
-	}
-	private:
-	uint8_t readb()
-	{
-		if (is_eof()) {
-			return 0;
-		}
-		return m_buffer[m_pos++];
-	}
+	std::vector<uint8_t> buffer() const;
+	bool is_eof() const;
+	void start_transaction();
+	bool commit_transaction();
+private:
+	uint8_t readb();
 	std::vector<uint8_t> m_buffer;
 	size_t m_pos = 0;
 	std::vector<size_t> m_pos_stack;
 };
 
-void StreamWriter::write(const VarInt& t)
+inline StreamReader::StreamReader(const std::vector<uint8_t>& buffer)
+	: m_buffer(buffer)
+{}
+
+inline std::vector<uint8_t> StreamReader::buffer() const
+{ return m_buffer; }
+
+inline bool StreamReader::is_eof() const
+{ return m_pos >= m_buffer.size(); }
+
+inline void StreamReader::start_transaction()
+{ m_pos_stack.push_back(m_pos); }
+
+inline bool StreamReader::commit_transaction()
+{
+	if (m_pos > m_buffer.size()) {
+		m_pos = m_pos_stack.back();
+		return false;
+	} else {
+		m_pos_stack.pop_back();
+		return true;
+	}
+}
+
+inline uint8_t StreamReader::readb()
+{
+	if (is_eof()) {
+		return 0;
+	}
+	return m_buffer[m_pos++];
+}
+
+inline void StreamWriter::write(const VarInt& t)
 {
 	uint64_t val = t.v;
 	int hibit;
@@ -107,7 +124,7 @@ void StreamWriter::write(const VarInt& t)
 	} while (hibit);
 }
 
-void StreamWriter::write(const LengthDelimited& t)
+inline void StreamWriter::write(const LengthDelimited& t)
 {
 	VarInt sz;
 	sz.v = t.data.size();
@@ -115,7 +132,7 @@ void StreamWriter::write(const LengthDelimited& t)
 	m_buffer.insert(m_buffer.end(), t.data.begin(), t.data.end());
 }
 
-void StreamWriter::write(const Fixed64& t)
+inline void StreamWriter::write(const Fixed64& t)
 {
 	uint32_t p1 = static_cast<uint32_t>(t.v);
 	uint32_t p2 = static_cast<uint32_t>(t.v >> 32);
@@ -129,7 +146,7 @@ void StreamWriter::write(const Fixed64& t)
 	m_buffer.push_back(static_cast<uint8_t>(p2 >> 24));
 }
 
-void StreamWriter::write(const Fixed32& t)
+inline void StreamWriter::write(const Fixed32& t)
 {
 	m_buffer.push_back(static_cast<uint8_t>(t.v));
 	m_buffer.push_back(static_cast<uint8_t>(t.v >> 8));
@@ -137,7 +154,7 @@ void StreamWriter::write(const Fixed32& t)
 	m_buffer.push_back(static_cast<uint8_t>(t.v >> 24));
 }
 
-void StreamReader::read(Fixed32& t)
+inline void StreamReader::read(Fixed32& t)
 {
 	t.v = 0;
 	t.v = (static_cast<uint32_t>(readb())) |
@@ -145,7 +162,8 @@ void StreamReader::read(Fixed32& t)
 		 (static_cast<uint32_t>(readb()) << 16) |
 		 (static_cast<uint32_t>(readb()) << 24);
 }
-void StreamReader::read(VarInt& t)
+
+inline void StreamReader::read(VarInt& t)
 {
 	t.v = 0;
 	int shift = 0;
@@ -158,7 +176,8 @@ void StreamReader::read(VarInt& t)
 		shift += 7;
 	}
 }
-void StreamReader::read(LengthDelimited& t)
+
+inline void StreamReader::read(LengthDelimited& t)
 {
 	VarInt len;
 	read(len);
@@ -168,7 +187,8 @@ void StreamReader::read(LengthDelimited& t)
 		t.data[s] = readb();
 	}
 }
-void StreamReader::read(Fixed64& t)
+
+inline void StreamReader::read(Fixed64& t)
 {
 	uint32_t p1 = 0;
 	uint32_t p2 = 0;
