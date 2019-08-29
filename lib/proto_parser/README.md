@@ -4,7 +4,6 @@ It only supports proto3, and at the moment, only a subset of proto3.
 
 Missing features (which may be added):
 
-* Repeated fields (`repeated`)
 * Comments (`/* like so */`, or double slashed)
 * Reserved fields to prevent field use: `message Foo { reserved 2, 15, 9 to 11; reserved "foo", "bar"; }`
 * Enumerations (`enum Foo { BAR = 0; FOO = 1; }`)

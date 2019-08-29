@@ -162,6 +162,7 @@ type MessageField struct {
 	RawName     string
 	DisplayName string
 	FieldNumber int
+	IsRepeated  bool
 }
 type Message struct {
 	Type   string
@@ -235,6 +236,13 @@ func handleMessage(tokens []string) (int, Message) {
 	// now read type -> var = fieldNames
 	for typeIndex = 2; typeIndex < len(tokens)-4 && isAlphaNum(tokens[typeIndex+0][0]); {
 		fieldTypeName := tokens[typeIndex+0]
+		isRepeated := false
+		if fieldTypeName == "repeated" {
+			isRepeated = true
+			typeIndex++
+			fieldTypeName = tokens[typeIndex+0]
+		}
+
 		varName := tokens[typeIndex+1]
 		equals := tokens[typeIndex+2]
 		if equals != "=" {
@@ -256,6 +264,7 @@ func handleMessage(tokens []string) (int, Message) {
 			RawName:     varName,
 			DisplayName: CamelCaseName(varName),
 			FieldNumber: fieldNum,
+			IsRepeated:  isRepeated,
 		})
 		typeIndex += 5
 	}
