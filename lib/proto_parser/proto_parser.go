@@ -130,7 +130,7 @@ func parseBuffer(buf []byte) []string {
 		tokens = append(tokens, parseLine(scanner.Text())...)
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+		fmt.Fprintln(os.Stderr, "reading buffer:", err)
 	}
 
 	tokens = cleanTokens(tokens)
@@ -148,6 +148,7 @@ type Message struct {
 	Fields []MessageField
 }
 
+// TODO: return error instead of panicing
 func ParseTypes(buf []byte) []Message {
 	tokens := parseBuffer(buf)
 
@@ -194,6 +195,10 @@ func ParseTypes(buf []byte) []Message {
 				FieldNumber: fieldNum,
 			})
 			typeIndex += 5
+		}
+
+		if typeIndex >= len(tokens) {
+			panic(fmt.Sprintf("Expected: message must have a close brace after vars, got unexpected EOF"))
 		}
 
 		if tokens[typeIndex] != "}" {
