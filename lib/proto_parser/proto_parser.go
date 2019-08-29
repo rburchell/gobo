@@ -67,6 +67,24 @@ func parseLine(line string) []string {
 		return i, []byte{' '}, nil
 	}
 
+	scanStringLiteral := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		var i int
+		done := false
+
+		// We are called on the first '"', so skip it.
+		for i = 1; !done && i < len(data); {
+			c := data[i]
+			switch {
+			case c == '"':
+				done = true
+			default:
+				i++
+			}
+		}
+
+		return i, data[1:i], nil
+	}
+
 	split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF {
 			return 0, nil, nil
@@ -81,6 +99,8 @@ func parseLine(line string) []string {
 			return scanWord(data, atEOF)
 		case c == ' ' || c == '\t':
 			return scanWhitespace(data, atEOF)
+		case c == '"':
+			return scanStringLiteral(data, atEOF)
 		case c == '{':
 			fallthrough
 		case c == '}':
@@ -152,6 +172,29 @@ type Message struct {
 func ParseTypes(buf []byte) []Message {
 	tokens := parseBuffer(buf)
 
+	handleSyntax := func(tokens []string) int {
+		if len(tokens) < 3 {
+			panic("Expected: syntax = \"proto3\" (insufficient tokens)")
+		}
+
+		if tokens[0] != "=" {
+			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not =)", tokens[0]))
+		}
+
+		// Technically this means we are laxer than we should be.
+		// We accept "syntax = proto3", though it must be quoted...
+		// We should return string literals quoted, perhaps?
+		if tokens[1] != "proto3" {
+			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not proto3)", tokens[1]))
+		}
+
+		if tokens[2] != ";" {
+			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not ;)", tokens[2]))
+		}
+
+		return 3
+	}
+
 	handleMessage := func(tokens []string) (int, Message) {
 		if len(tokens) < 3 {
 			panic("Expected: message Foo {} (insufficient tokens)")
@@ -216,7 +259,10 @@ func ParseTypes(buf []byte) []Message {
 			consumed, msg := handleMessage(tokens[i:])
 			i += consumed
 			types = append(types, msg)
-
+		case "syntax":
+			i++
+			consumed := handleSyntax(tokens[i:])
+			i += consumed
 		default:
 			panic(fmt.Sprintf("Unexpected top level token: %s", tok))
 		}
