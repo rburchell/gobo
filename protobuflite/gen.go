@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/rburchell/gobo/lib/proto_parser"
 	"log"
-	"strings"
 )
 
 func mapTypeToCppType(typeName string) string {
@@ -55,28 +55,7 @@ func wireTypeForField(typeName string) wireType {
 	return lengthDelimited
 }
 
-func camelCaseName(name string) string {
-	newName := ""
-	nextIsUpper := false
-	for _, c := range name {
-		s := string(c)
-
-		if s == "_" {
-			nextIsUpper = true
-			continue
-		}
-
-		if nextIsUpper {
-			newName += strings.ToUpper(s)
-			nextIsUpper = false
-		} else {
-			newName += s
-		}
-	}
-	return newName
-}
-
-func genTypes(types []Message) {
+func genTypes(types []proto_parser.Message) {
 	preamble()
 
 	// headers
@@ -88,10 +67,10 @@ func genTypes(types []Message) {
 			fmt.Printf("public:\n")
 			if t != "" {
 				fmt.Printf("    inline %s %s() const { return m_%s; };\n", t, field.DisplayName, field.DisplayName)
-				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), t, field.DisplayName)
+				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t, field.DisplayName)
 			} else {
 				fmt.Printf("    inline const %s %s() const { return m_%s; };\n", field.Type, field.DisplayName, field.DisplayName)
-				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", camelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
+				fmt.Printf("    inline void %s(%s v) { m_%s = v; };\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type, field.DisplayName)
 			}
 			fmt.Printf("private:\n")
 			if t != "" {
@@ -199,9 +178,9 @@ func genTypes(types []Message) {
 			fmt.Printf("        case %d:\n", field.FieldNumber)
 			switch wireTypeForField(field.Type) {
 			case varInt:
-				fmt.Printf("            t.%s(vi.v);\n", camelCaseName("set_"+field.DisplayName))
+				fmt.Printf("            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 			case fixed64:
-				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", camelCaseName("set_"+field.DisplayName), field.Type)
+				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			case lengthDelimited:
 				t := mapTypeToCppType(field.Type)
 				if t == "" {
@@ -209,13 +188,13 @@ func genTypes(types []Message) {
 					fmt.Printf("            {\n")
 					fmt.Printf("            %s td;\n", field.Type)
 					fmt.Printf("            decode(ld.data, td);\n")
-					fmt.Printf("            t.%s(td);\n", camelCaseName("set_"+field.DisplayName))
+					fmt.Printf("            t.%s(td);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 					fmt.Printf("            }\n")
 				} else {
-					fmt.Printf("            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", camelCaseName("set_"+field.DisplayName))
+					fmt.Printf("            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 				}
 			case fixed32:
-				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", camelCaseName("set_"+field.DisplayName), field.Type)
+				fmt.Printf("            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			default:
 				panic("boom")
 			}
@@ -241,6 +220,6 @@ message PlaybackFile {
 }
 `)
 
-	types := parseTypes(typeBuf)
+	types := proto_parser.ParseTypes(typeBuf)
 	genTypes(types)
 }

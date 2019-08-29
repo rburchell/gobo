@@ -1,4 +1,4 @@
-package main
+package proto_parser
 
 import (
 	"bufio"
@@ -148,7 +148,7 @@ type Message struct {
 	Fields []MessageField
 }
 
-func parseTypes(buf []byte) []Message {
+func ParseTypes(buf []byte) []Message {
 	tokens := parseBuffer(buf)
 
 	handleMessage := func(tokens []string) (int, Message) {
@@ -184,13 +184,13 @@ func parseTypes(buf []byte) []Message {
 
 			fieldNum, err := strconv.Atoi(fieldNumber)
 			if err != nil {
-				panic(fmt.Sprintf("Field number (%s) is not a number", fieldNum))
+				panic(fmt.Sprintf("Field number (%d) is not a number", fieldNum))
 			}
 
 			m.Fields = append(m.Fields, MessageField{
 				Type:        fieldTypeName,
 				RawName:     varName,
-				DisplayName: camelCaseName(varName),
+				DisplayName: CamelCaseName(varName),
 				FieldNumber: fieldNum,
 			})
 			typeIndex += 5
