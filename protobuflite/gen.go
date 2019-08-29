@@ -290,10 +290,6 @@ func camelCaseName(name string) string {
 	return newName
 }
 
-// TODO:
-// varints
-// encode type and field number together like protobuf
-
 func genTypes(types []Message) {
 	preamble()
 
