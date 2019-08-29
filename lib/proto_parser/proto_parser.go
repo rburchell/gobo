@@ -171,85 +171,6 @@ type Message struct {
 // TODO: return error instead of panicing
 func ParseTypes(buf []byte) []Message {
 	tokens := parseBuffer(buf)
-
-	handleSyntax := func(tokens []string) int {
-		if len(tokens) < 3 {
-			panic("Expected: syntax = \"proto3\" (insufficient tokens)")
-		}
-
-		if tokens[0] != "=" {
-			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not =)", tokens[0]))
-		}
-
-		// Technically this means we are laxer than we should be.
-		// We accept "syntax = proto3", though it must be quoted...
-		// We should return string literals quoted, perhaps?
-		if tokens[1] != "proto3" {
-			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not proto3)", tokens[1]))
-		}
-
-		if tokens[2] != ";" {
-			panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not ;)", tokens[2]))
-		}
-
-		return 3
-	}
-
-	handleMessage := func(tokens []string) (int, Message) {
-		if len(tokens) < 3 {
-			panic("Expected: message Foo {} (insufficient tokens)")
-		}
-
-		typeName := tokens[0]
-		if !isAlphaNum(typeName[0]) {
-			panic(fmt.Sprintf("Expected: message typeName {} (%s is not a type name)", typeName))
-		}
-
-		if tokens[1] != "{" {
-			panic(fmt.Sprintf("Expected: message must have an open brace after type name, got %s)", tokens[1]))
-		}
-
-		m := Message{Type: typeName}
-
-		var typeIndex int
-		// now read type -> var = fieldNames
-		for typeIndex = 2; typeIndex < len(tokens)-4 && isAlphaNum(tokens[typeIndex+0][0]); {
-			fieldTypeName := tokens[typeIndex+0]
-			varName := tokens[typeIndex+1]
-			equals := tokens[typeIndex+2]
-			if equals != "=" {
-				panic(fmt.Sprintf("Field %s has no '= fieldnum' (got %s instead of equals)", varName, equals))
-			}
-			fieldNumber := tokens[typeIndex+3]
-			semi := tokens[typeIndex+4]
-			if semi != ";" {
-				panic(fmt.Sprintf("Field %s has no terminating semicolon (got %s instead of ;)", varName, semi))
-			}
-
-			fieldNum, err := strconv.Atoi(fieldNumber)
-			if err != nil {
-				panic(fmt.Sprintf("Field number (%d) is not a number", fieldNum))
-			}
-
-			m.Fields = append(m.Fields, MessageField{
-				Type:        fieldTypeName,
-				RawName:     varName,
-				DisplayName: CamelCaseName(varName),
-				FieldNumber: fieldNum,
-			})
-			typeIndex += 5
-		}
-
-		if typeIndex >= len(tokens) {
-			panic(fmt.Sprintf("Expected: message must have a close brace after vars, got unexpected EOF"))
-		}
-
-		if tokens[typeIndex] != "}" {
-			panic(fmt.Sprintf("Expected: message must have a close brace after vars, got %s)", tokens[typeIndex]))
-		}
-		return typeIndex + 1, m
-	}
-
 	types := []Message{}
 	for i := 0; i < len(tokens); {
 		tok := tokens[i]
@@ -269,4 +190,82 @@ func ParseTypes(buf []byte) []Message {
 	}
 
 	return types
+}
+
+func handleSyntax(tokens []string) int {
+	if len(tokens) < 3 {
+		panic("Expected: syntax = \"proto3\" (insufficient tokens)")
+	}
+
+	if tokens[0] != "=" {
+		panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not =)", tokens[0]))
+	}
+
+	// Technically this means we are laxer than we should be.
+	// We accept "syntax = proto3", though it must be quoted...
+	// We should return string literals quoted, perhaps?
+	if tokens[1] != "proto3" {
+		panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not proto3)", tokens[1]))
+	}
+
+	if tokens[2] != ";" {
+		panic(fmt.Sprintf("Expected: syntax = \"proto3\"; (%s is not ;)", tokens[2]))
+	}
+
+	return 3
+}
+
+func handleMessage(tokens []string) (int, Message) {
+	if len(tokens) < 3 {
+		panic("Expected: message Foo {} (insufficient tokens)")
+	}
+
+	typeName := tokens[0]
+	if !isAlphaNum(typeName[0]) {
+		panic(fmt.Sprintf("Expected: message typeName {} (%s is not a type name)", typeName))
+	}
+
+	if tokens[1] != "{" {
+		panic(fmt.Sprintf("Expected: message must have an open brace after type name, got %s)", tokens[1]))
+	}
+
+	m := Message{Type: typeName}
+
+	var typeIndex int
+	// now read type -> var = fieldNames
+	for typeIndex = 2; typeIndex < len(tokens)-4 && isAlphaNum(tokens[typeIndex+0][0]); {
+		fieldTypeName := tokens[typeIndex+0]
+		varName := tokens[typeIndex+1]
+		equals := tokens[typeIndex+2]
+		if equals != "=" {
+			panic(fmt.Sprintf("Field %s has no '= fieldnum' (got %s instead of equals)", varName, equals))
+		}
+		fieldNumber := tokens[typeIndex+3]
+		semi := tokens[typeIndex+4]
+		if semi != ";" {
+			panic(fmt.Sprintf("Field %s has no terminating semicolon (got %s instead of ;)", varName, semi))
+		}
+
+		fieldNum, err := strconv.Atoi(fieldNumber)
+		if err != nil {
+			panic(fmt.Sprintf("Field number (%d) is not a number", fieldNum))
+		}
+
+		m.Fields = append(m.Fields, MessageField{
+			Type:        fieldTypeName,
+			RawName:     varName,
+			DisplayName: CamelCaseName(varName),
+			FieldNumber: fieldNum,
+		})
+		typeIndex += 5
+	}
+
+	if typeIndex >= len(tokens) {
+		panic(fmt.Sprintf("Expected: message must have a close brace after vars, got unexpected EOF"))
+	}
+
+	if tokens[typeIndex] != "}" {
+		panic(fmt.Sprintf("Expected: message must have a close brace after vars, got %s)", tokens[typeIndex]))
+	}
+	return typeIndex + 1, m
 }
