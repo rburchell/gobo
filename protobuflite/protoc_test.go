@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/rburchell/gobo/lib/proto_parser"
-	"github.com/stvp/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -309,9 +308,6 @@ func TestInt64(t *testing.T) {
 }
 
 func TestSint32(t *testing.T) {
-	// unsupported at present:
-	//  However, there is an important difference between the signed int types (sint32 and sint64) and the "standard" int types (int32 and int64) when it comes to encoding negative numbers. If you use int32 or int64 as the type for a negative number, the resulting varint is always ten bytes long – it is, effectively, treated like a very large unsigned integer. If you use one of the signed types, the resulting varint uses ZigZag encoding, which is much more efficient.
-	defer assert.Panic(t, "unsupported")
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
@@ -323,9 +319,6 @@ func TestSint32(t *testing.T) {
 }
 
 func TestSint64(t *testing.T) {
-	// unsupported at present:
-	//  However, there is an important difference between the signed int types (sint32 and sint64) and the "standard" int types (int32 and int64) when it comes to encoding negative numbers. If you use int32 or int64 as the type for a negative number, the resulting varint is always ten bytes long – it is, effectively, treated like a very large unsigned integer. If you use one of the signed types, the resulting varint uses ZigZag encoding, which is much more efficient.
-	defer assert.Panic(t, "unsupported")
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",

@@ -23,10 +23,8 @@ func mapTypeToCppType(typeName string) string {
 	case "int32":
 		return "int32_t"
 	case "sint32":
-		panic("unsupported")
 		return "int32_t"
 	case "sint64":
-		panic("unsupported")
 		return "int64_t"
 	case "fixed32":
 		return "uint32_t"
@@ -62,7 +60,13 @@ func writeEncodeFunction(out io.Writer, message proto_parser.Message) {
 		switch wt {
 		case proto_parser.VarIntWireType:
 			fmt.Fprintf(out, "    {\n")
-			fmt.Fprintf(out, "        VarInt vi;\n")
+			encoderType := "VarInt"
+			if field.Type == "sint32" {
+				encoderType = "Sint32"
+			} else if field.Type == "sint64" {
+				encoderType = "Sint64"
+			}
+			fmt.Fprintf(out, "        %s vi;\n", encoderType)
 			fmt.Fprintf(out, "        vi.v = t.%s();\n", field.DisplayName)
 			fmt.Fprintf(out, "        stream.write(vi);\n")
 			fmt.Fprintf(out, "    }\n")
@@ -143,7 +147,13 @@ func writeDecodeFunction(out io.Writer, message proto_parser.Message) {
 		fmt.Fprintf(out, "        case %d:\n", field.FieldNumber)
 		switch field.WireType() {
 		case proto_parser.VarIntWireType:
-			fmt.Fprintf(out, "            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+			if field.Type == "sint32" {
+				fmt.Fprintf(out, "            t.%s(int32_t(uint64_t((uint32_t(vi.v) >> 1) ^ uint32_t((int32_t(uint64_t(vi.v)&1)<<31)>>31))));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+			} else if field.Type == "sint64" {
+				fmt.Fprintf(out, "            t.%s(int64_t(uint64_t(vi.v) >> 1) ^ uint64_t((int64_t(uint64_t(vi.v)&1)<<63)>>63));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+			} else {
+				fmt.Fprintf(out, "            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+			}
 		case proto_parser.Fixed32WireType:
 			t := mapTypeToCppType(field.Type)
 			fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t)

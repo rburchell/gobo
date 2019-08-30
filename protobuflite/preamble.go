@@ -27,6 +27,16 @@ struct VarInt
 	uint64_t v;
 };
 
+struct Sint32
+{
+	uint32_t v;
+};
+
+struct Sint64
+{
+	uint64_t v;
+};
+
 struct Fixed64
 {
 	uint64_t v;
@@ -45,6 +55,8 @@ class StreamWriter
 {
 public:
 	void write(const VarInt& v);
+	void write(const Sint32& v);
+	void write(const Sint64& v);
 	void write(const LengthDelimited& v);
 	void write(const Fixed64& v);
 	void write(const Fixed32& v);
@@ -115,6 +127,20 @@ inline void StreamWriter::write(const VarInt& t)
 		m_buffer.push_back(uint8_t((val & 0x7f) | hibit));
 		val >>= 7;
 	} while (hibit);
+}
+
+inline void StreamWriter::write(const Sint32& t)
+{
+	VarInt vv;
+	vv.v = (t.v << 1) ^ (t.v >> 31);
+	write(vv);
+}
+
+inline void StreamWriter::write(const Sint64& t)
+{
+	VarInt vv;
+	vv.v = (t.v << 1) ^ (t.v >> 63);
+	write(vv);
 }
 
 inline void StreamWriter::write(const LengthDelimited& t)
