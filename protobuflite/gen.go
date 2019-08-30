@@ -11,8 +11,9 @@ import (
 // If the type is not a built-in type (i.e. it's a reference to another type),
 // then return empty string.
 func mapTypeToCppType(typeName string) string {
-	// ### XXX: not exhaustive
 	switch typeName {
+	case "bool":
+		return "bool"
 	case "uint64":
 		return "uint64_t"
 	case "int64":
@@ -21,6 +22,20 @@ func mapTypeToCppType(typeName string) string {
 		return "uint32_t"
 	case "int32":
 		return "int32_t"
+	case "sint32":
+		panic("unsupported")
+		return "int32_t"
+	case "sint64":
+		panic("unsupported")
+		return "int64_t"
+	case "fixed32":
+		return "uint32_t"
+	case "fixed64":
+		return "uint64_t"
+	case "sfixed32":
+		return "int32_t"
+	case "sfixed64":
+		return "int64_t"
 	case "float":
 		return "float"
 	case "double":
@@ -158,8 +173,12 @@ func genTypes(out io.Writer, types []proto_parser.Message) {
 			switch field.WireType() {
 			case proto_parser.VarIntWireType:
 				fmt.Fprintf(out, "            t.%s(vi.v);\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
+			case proto_parser.Fixed32WireType:
+				t := mapTypeToCppType(field.Type)
+				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t)
 			case proto_parser.Fixed64WireType:
-				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
+				t := mapTypeToCppType(field.Type)
+				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f64.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), t)
 			case proto_parser.LengthDelimitedWireType:
 				t := mapTypeToCppType(field.Type)
 				if t == "" {
@@ -172,8 +191,6 @@ func genTypes(out io.Writer, types []proto_parser.Message) {
 				} else {
 					fmt.Fprintf(out, "            t.%s(std::string((const char*)ld.data.data(), ld.data.size()));\n", proto_parser.CamelCaseName("set_"+field.DisplayName))
 				}
-			case proto_parser.Fixed32WireType:
-				fmt.Fprintf(out, "            t.%s(*reinterpret_cast<%s*>(&f32.v));\n", proto_parser.CamelCaseName("set_"+field.DisplayName), field.Type)
 			default:
 				panic(fmt.Sprintf("Unknown wiretype on decode: %d", field.WireType()))
 			}

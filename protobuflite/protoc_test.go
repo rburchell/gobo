@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/rburchell/gobo/lib/proto_parser"
+	"github.com/stvp/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -240,17 +241,17 @@ func runTest(protoSource string, testMessageName string, testFields []testField)
 	verifyAgainstGo(cppOutput, protoSource, testMessageName, testFields)
 }
 
-func TestUint32(t *testing.T) {
-	runTest(`syntax = "proto3"; message PlaybackHeader { uint32 magic = 1; }`, "PlaybackHeader", []testField{
+func TestDouble(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { double magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
 			goName:          "Magic",
-			printfSpecifier: "%d",
-			value:           "1010",
+			printfSpecifier: "%f",
+			value:           "5.678",
+			isFloat:         true,
 		},
 	})
 }
-
 func TestFloat(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { float magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
@@ -263,14 +264,129 @@ func TestFloat(t *testing.T) {
 	})
 }
 
-func TestDouble(t *testing.T) {
-	runTest(`syntax = "proto3"; message PlaybackHeader { double magic = 1; } `, "PlaybackHeader", []testField{
+func TestUint32(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { uint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
 			goName:          "Magic",
-			printfSpecifier: "%f",
-			value:           "5.678",
-			isFloat:         true,
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestInt32(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { int32 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestUint64(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { uint64 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestInt64(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { int64 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestSint32(t *testing.T) {
+	// unsupported at present:
+	//  However, there is an important difference between the signed int types (sint32 and sint64) and the "standard" int types (int32 and int64) when it comes to encoding negative numbers. If you use int32 or int64 as the type for a negative number, the resulting varint is always ten bytes long – it is, effectively, treated like a very large unsigned integer. If you use one of the signed types, the resulting varint uses ZigZag encoding, which is much more efficient.
+	defer assert.Panic(t, "unsupported")
+	runTest(`syntax = "proto3"; message PlaybackHeader { sint32 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestSint64(t *testing.T) {
+	// unsupported at present:
+	//  However, there is an important difference between the signed int types (sint32 and sint64) and the "standard" int types (int32 and int64) when it comes to encoding negative numbers. If you use int32 or int64 as the type for a negative number, the resulting varint is always ten bytes long – it is, effectively, treated like a very large unsigned integer. If you use one of the signed types, the resulting varint uses ZigZag encoding, which is much more efficient.
+	defer assert.Panic(t, "unsupported")
+	runTest(`syntax = "proto3"; message PlaybackHeader { sint64 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestFixed32(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { fixed32 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestFixed64(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { fixed64 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestSfixed32(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed32 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestSfixed64(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed64 magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+	})
+}
+
+func TestBool(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { bool magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "true",
 		},
 	})
 }

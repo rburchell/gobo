@@ -154,6 +154,8 @@ type MessageField struct {
 // Return the protobuf wiretype for a field.
 func (this MessageField) WireType() WireType {
 	switch this.Type {
+	case "bool":
+		return VarIntWireType
 	case "uint64":
 		return VarIntWireType
 	case "int64":
@@ -162,8 +164,20 @@ func (this MessageField) WireType() WireType {
 		return VarIntWireType
 	case "int32":
 		return VarIntWireType
+	case "sint32":
+		return VarIntWireType
+	case "sint64":
+		return VarIntWireType
+	case "fixed32":
+		return Fixed32WireType
+	case "sfixed32":
+		return Fixed32WireType
 	case "float":
 		return Fixed32WireType
+	case "fixed64":
+		return Fixed64WireType
+	case "sfixed64":
+		return Fixed64WireType
 	case "double":
 		return Fixed64WireType
 	case "bytes":
