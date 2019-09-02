@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"unicode"
 
 	"github.com/rburchell/gobo/lib/proto_parser"
 )
@@ -38,9 +39,6 @@ type testField struct {
 	// The name of the field in the data type
 	name string
 
-	// The name that Go uses. Not really necessary, could write a capitalization helper instead.
-	goName string
-
 	// The printf specifier to use for the type in code (e.g. %d, %s)
 	printfSpecifier string
 
@@ -54,6 +52,14 @@ type testField struct {
 	// Whether or not this field is string/bytes
 	// Needed to correctly printf the value in C++
 	isStringOrBytes bool
+}
+
+// Returns the type name Go-ized.
+func (this testField) goName() string {
+	nn := ""
+	nn += string(unicode.ToUpper(rune(this.name[0])))
+	nn += this.name[1:]
+	return nn
 }
 
 // Return the value suitable for inclusion inside a printf string (for example).
@@ -244,12 +250,12 @@ func verifyAgainstGo(cppOut []byte, protoSource string, testMessageName string, 
 		`, testMessageName)
 
 	for _, field := range testFields {
-		fmt.Fprintf(goSource, `log.Printf("Decoded field: %s => %s (wanted: %s)\n", pmsg.%s);`, field.name, field.printfSpecifier, field.valuePrintf(), field.goName)
+		fmt.Fprintf(goSource, `log.Printf("Decoded field: %s => %s (wanted: %s)\n", pmsg.%s);`, field.name, field.printfSpecifier, field.valuePrintf(), field.goName())
 		fmt.Fprintf(goSource, "\n")
 		if field.isStringOrBytes {
-			fmt.Fprintf(goSource, "if (string(pmsg.%s) != string(%s)) {\n", field.goName, field.value)
+			fmt.Fprintf(goSource, "if (string(pmsg.%s) != string(%s)) {\n", field.goName(), field.value)
 		} else {
-			fmt.Fprintf(goSource, "if (pmsg.%s != %s) {\n", field.goName, field.value)
+			fmt.Fprintf(goSource, "if (pmsg.%s != %s) {\n", field.goName(), field.value)
 		}
 		fmt.Fprintf(goSource, "    panic(\"Values did not match\\n\");\n")
 		fmt.Fprintf(goSource, "}\n")
@@ -318,7 +324,6 @@ func TestDouble(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { double magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%f",
 			value:           "5.678",
 			isFloat:         true,
@@ -331,7 +336,6 @@ func TestFloat(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { float magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%f",
 			value:           "1.234",
 			isFloat:         true,
@@ -344,7 +348,6 @@ func TestUint32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { uint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -356,7 +359,6 @@ func TestInt32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { int32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -368,7 +370,6 @@ func TestUint64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { uint64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -380,7 +381,6 @@ func TestInt64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { int64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -392,7 +392,6 @@ func TestSint32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -404,7 +403,6 @@ func TestSint64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -416,7 +414,6 @@ func TestFixed32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { fixed32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -428,7 +425,6 @@ func TestFixed64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { fixed64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -440,7 +436,6 @@ func TestSfixed32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -452,7 +447,6 @@ func TestSfixed64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
@@ -464,7 +458,6 @@ func TestBool(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { bool magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "true",
 		},
@@ -472,7 +465,6 @@ func TestBool(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { bool magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "false",
 		},
@@ -484,7 +476,6 @@ func TestString(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { string magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%s",
 			value:           "\"hello world string\"",
 			isStringOrBytes: true,
@@ -497,7 +488,6 @@ func TestBytes(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { bytes magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%s",
 			value:           "\"hello world bytes\"",
 			isStringOrBytes: true,
@@ -517,20 +507,17 @@ message PlaybackHeader {
 `, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
 		testField{
 			name:            "testfloat",
-			goName:          "Testfloat",
 			printfSpecifier: "%f",
 			value:           "1.234",
 			isFloat:         true,
 		},
 		testField{
 			name:            "testdouble",
-			goName:          "Testdouble",
 			printfSpecifier: "%f",
 			value:           "5.678",
 			isFloat:         true,
@@ -550,20 +537,17 @@ message PlaybackHeader {
 `, "PlaybackHeader", []testField{
 		testField{
 			name:            "magic",
-			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "1010",
 		},
 		testField{
 			name:            "testfloat",
-			goName:          "Testfloat",
 			printfSpecifier: "%f",
 			value:           "1.234",
 			isFloat:         true,
 		},
 		testField{
 			name:            "testdouble",
-			goName:          "Testdouble",
 			printfSpecifier: "%f",
 			value:           "5.678",
 			isFloat:         true,
