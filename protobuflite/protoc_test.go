@@ -18,6 +18,16 @@ type testField struct {
 	printfSpecifier string
 	value           string
 	isFloat         bool
+	isStringOrBytes         bool
+}
+
+// Return the value suitable for inclusion inside a printf string (for example).
+func (this testField) valuePrintf() string {
+	if this.isStringOrBytes {
+		// Quoted string. So unquote it.
+		return this.value[1:len(this.value)-1]
+	}
+	return this.value
 }
 
 func outputTestMain(out io.Writer, headerName string, typeToInstantiate string, fieldsToSet []testField) {
@@ -44,7 +54,11 @@ int main(int argc, char **argv) {
 
 	for _, field := range fieldsToSet {
 		fmt.Fprintf(out, "valueToEncode.%s(%s);\n", proto_parser.CamelCaseName("set_"+field.name), field.value)
-		fmt.Fprintf(out, `fprintf(stderr, "Encoded field: %s => %s (wanted: %s)\n", valueToEncode.%s());`, field.name, field.printfSpecifier, field.value, proto_parser.CamelCaseName(field.name))
+		if field.isStringOrBytes {
+			fmt.Fprintf(out, `fprintf(stderr, "Encoded field: %s => %s (wanted: %s)\n", valueToEncode.%s().data());`, field.name, field.printfSpecifier, field.valuePrintf(), proto_parser.CamelCaseName(field.name))
+		} else {
+			fmt.Fprintf(out, `fprintf(stderr, "Encoded field: %s => %s (wanted: %s)\n", valueToEncode.%s());`, field.name, field.printfSpecifier, field.valuePrintf(), proto_parser.CamelCaseName(field.name))
+		}
 		fmt.Fprintf(out, "\n")
 		if field.isFloat {
 			fmt.Fprintf(out, "if (!essentiallyEqual(valueToEncode.%s(), %s, 0.000000000001)) {\n", proto_parser.CamelCaseName(field.name), field.value)
@@ -77,7 +91,12 @@ int main(int argc, char **argv) {
 		`, typeToInstantiate)
 
 	for _, field := range fieldsToSet {
-		fmt.Fprintf(out, `fprintf(stderr, "Decoded field: %s => %s (wanted: %s)\n", valueToDecode.%s());`, field.name, field.printfSpecifier, field.value, proto_parser.CamelCaseName(field.name))
+
+		if field.isStringOrBytes {
+			fmt.Fprintf(out, `fprintf(stderr, "Decoded field: %s => %s (wanted: %s)\n", valueToDecode.%s().data());`, field.name, field.printfSpecifier, field.valuePrintf(), proto_parser.CamelCaseName(field.name))
+		} else {
+			fmt.Fprintf(out, `fprintf(stderr, "Decoded field: %s => %s (wanted: %s)\n", valueToDecode.%s());`, field.name, field.printfSpecifier, field.valuePrintf(), proto_parser.CamelCaseName(field.name))
+		}
 		fmt.Fprintf(out, "\n")
 		if field.isFloat {
 			fmt.Fprintf(out, "if (!essentiallyEqual(valueToDecode.%s(), %s, 0.000000000001)) {\n", proto_parser.CamelCaseName(field.name), field.value)
@@ -180,15 +199,18 @@ func verifyAgainstGo(cppOut []byte, protoSource string, testMessageName string, 
 		`, testMessageName)
 
 	for _, field := range testFields {
-		fmt.Fprintf(goSource, `log.Printf("Decoded field: %s => %s (wanted: %s)\n", pmsg.%s);`, field.name, field.printfSpecifier, field.value, field.goName)
+		fmt.Fprintf(goSource, `log.Printf("Decoded field: %s => %s (wanted: %s)\n", pmsg.%s);`, field.name, field.printfSpecifier, field.valuePrintf(), field.goName)
 		fmt.Fprintf(goSource, "\n")
-		fmt.Fprintf(goSource, "if (pmsg.%s != %s) {\n", field.goName, field.value)
+		if field.isStringOrBytes {
+			fmt.Fprintf(goSource, "if (string(pmsg.%s) != string(%s)) {\n", field.goName, field.value)
+		} else {
+			fmt.Fprintf(goSource, "if (pmsg.%s != %s) {\n", field.goName, field.value)
+		}
 		fmt.Fprintf(goSource, "    panic(\"Values did not match\\n\");\n")
 		fmt.Fprintf(goSource, "}\n")
 	}
 
 	fmt.Fprintf(goSource, `
-
 	}
 	`)
 
@@ -239,6 +261,8 @@ func runTest(protoSource string, testMessageName string, testFields []testField)
 
 	verifyAgainstGo(cppOutput, protoSource, testMessageName, testFields)
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func TestDouble(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { double magic = 1; } `, "PlaybackHeader", []testField{
@@ -380,6 +404,30 @@ func TestBool(t *testing.T) {
 			goName:          "Magic",
 			printfSpecifier: "%d",
 			value:           "true",
+		},
+	})
+}
+
+func TestString(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { string magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%s",
+			value:           "\"hello world string\"",
+			isStringOrBytes: true,
+		},
+	})
+}
+
+func TestBytes(t *testing.T) {
+	runTest(`syntax = "proto3"; message PlaybackHeader { bytes magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%s",
+			value:           "\"hello world bytes\"",
+			isStringOrBytes: true,
 		},
 	})
 }
