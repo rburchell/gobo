@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/rburchell/gobo/lib/proto_parser"
 	"io"
 	"io/ioutil"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/rburchell/gobo/lib/proto_parser"
 )
 
 type testField struct {
@@ -18,14 +19,14 @@ type testField struct {
 	printfSpecifier string
 	value           string
 	isFloat         bool
-	isStringOrBytes         bool
+	isStringOrBytes bool
 }
 
 // Return the value suitable for inclusion inside a printf string (for example).
 func (this testField) valuePrintf() string {
 	if this.isStringOrBytes {
 		// Quoted string. So unquote it.
-		return this.value[1:len(this.value)-1]
+		return this.value[1 : len(this.value)-1]
 	}
 	return this.value
 }
