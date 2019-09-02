@@ -13,12 +13,46 @@ import (
 	"github.com/rburchell/gobo/lib/proto_parser"
 )
 
+// TODO: consider splitting the way these tests work up a bit
+// Right now, there's a full pipeline, so:
+// input -> C++ encode/decode (& verify) -> go decode (& verify)
+// But perhaps we should rather have:
+//     * C++ encode to bytes (& verify)
+//     * C++ decode from bytes (& verify)
+//     * Go encode to bytes (& verify)
+//     * Go decode from bytes (& verify)
+//
+// ... as a set of discrete steps, and then mix and match them, with validation on each step:
+//
+// For example:
+//     * C++ encode -> go decode
+//     * C++ encode -> C++ decode
+//     * go encode -> C++ decode
+//
+// This would also mean we'd be able to introduce other, different tests that aren't just strictly
+// based on encoding of fields. For instance, we could test our behaviour of decoding multiple
+// fields with the same tag, and other stuff like that, that is required by protobuf to be compliant
+// with other implementations.
+
 type testField struct {
-	name            string
-	goName          string
+	// The name of the field in the data type
+	name string
+
+	// The name that Go uses. Not really necessary, could write a capitalization helper instead.
+	goName string
+
+	// The printf specifier to use for the type in code (e.g. %d, %s)
 	printfSpecifier string
-	value           string
-	isFloat         bool
+
+	// The actual value. Either a quoted string for string/bytes, or an unquoted numeric value.
+	value string
+
+	// Whether or not this field is floating point
+	// This is needed as floating point comparison must be fuzzy
+	isFloat bool
+
+	// Whether or not this field is string/bytes
+	// Needed to correctly printf the value in C++
 	isStringOrBytes bool
 }
 
@@ -31,6 +65,9 @@ func (this testField) valuePrintf() string {
 	return this.value
 }
 
+// Write a C++ application to 'out' that encodes, and decodes, and verifies a set of fields.
+// The given headerName is used to know what to include: the header is expected to provide all of the
+// required type definitions, and serialization code.
 func outputTestMain(out io.Writer, headerName string, typeToInstantiate string, fieldsToSet []testField) {
 	fmt.Fprintf(out, `#include "%s"
 #include <cmath>
@@ -113,6 +150,9 @@ int main(int argc, char **argv) {
 	fmt.Fprintf(out, "}\n}")
 }
 
+// Compile and run a C++ test file.
+// The returned byte slice is the encoded bytes on stdout, so that they can be verified
+// against other external implementations.
 func compileAndRun(file string) []byte {
 	// Compile...
 	tempBinary, err := ioutil.TempFile("", "protobuflite.testbinary.*")
@@ -152,6 +192,10 @@ func compileAndRun(file string) []byte {
 	return ret
 }
 
+// Verify the results of the cpp encoding process against go-protobuf.
+// cppOut contains the (encoded) message from C++. protoSource contains the proto definition.
+// testMessageName contains the message name in the .proto to decode.
+// testFields contains information about all the fields in the .proto.
 func verifyAgainstGo(cppOut []byte, protoSource string, testMessageName string, testFields []testField) {
 	tmpDir, err := ioutil.TempDir("", "protobuflite.test.")
 	if err != nil {
@@ -240,6 +284,8 @@ func verifyAgainstGo(cppOut []byte, protoSource string, testMessageName string, 
 	}
 }
 
+// Run a test using a given proto definition, testMessageName name to encode/decode,
+// and testFields containing information about the fields in the protoSource.
 func runTest(protoSource string, testMessageName string, testFields []testField) {
 	typeBuf := []byte(protoSource)
 
@@ -263,8 +309,11 @@ func runTest(protoSource string, testMessageName string, testFields []testField)
 	verifyAgainstGo(cppOutput, protoSource, testMessageName, testFields)
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// tests below this point
+////////////////////////////////////////////////////////////////////////////////
 
+// Test encoding of the double type.
 func TestDouble(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { double magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
@@ -276,6 +325,8 @@ func TestDouble(t *testing.T) {
 		},
 	})
 }
+
+// Test encoding of the float type.
 func TestFloat(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { float magic = 1; } `, "PlaybackHeader", []testField{
 		testField{
@@ -288,6 +339,7 @@ func TestFloat(t *testing.T) {
 	})
 }
 
+// Test encoding of the uint32 type.
 func TestUint32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { uint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -299,6 +351,7 @@ func TestUint32(t *testing.T) {
 	})
 }
 
+// Test encoding of the int32 type.
 func TestInt32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { int32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -310,6 +363,7 @@ func TestInt32(t *testing.T) {
 	})
 }
 
+// Test encoding of the uint64 type.
 func TestUint64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { uint64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -321,6 +375,7 @@ func TestUint64(t *testing.T) {
 	})
 }
 
+// Test encoding of the int64 type.
 func TestInt64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { int64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -332,6 +387,7 @@ func TestInt64(t *testing.T) {
 	})
 }
 
+// Test encoding of the sint32 type.
 func TestSint32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -343,6 +399,7 @@ func TestSint32(t *testing.T) {
 	})
 }
 
+// Test encoding of the sint64 type.
 func TestSint64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sint64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -354,6 +411,7 @@ func TestSint64(t *testing.T) {
 	})
 }
 
+// Test encoding of the fixed32 type.
 func TestFixed32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { fixed32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -365,6 +423,7 @@ func TestFixed32(t *testing.T) {
 	})
 }
 
+// Test encoding of the fixed64 type.
 func TestFixed64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { fixed64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -376,6 +435,7 @@ func TestFixed64(t *testing.T) {
 	})
 }
 
+// Test encoding of the sfixed32 type.
 func TestSfixed32(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed32 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -387,6 +447,7 @@ func TestSfixed32(t *testing.T) {
 	})
 }
 
+// Test encoding of the sfixed64 type.
 func TestSfixed64(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { sfixed64 magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -398,6 +459,7 @@ func TestSfixed64(t *testing.T) {
 	})
 }
 
+// Test encoding of the bool type.
 func TestBool(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { bool magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -407,8 +469,17 @@ func TestBool(t *testing.T) {
 			value:           "true",
 		},
 	})
+	runTest(`syntax = "proto3"; message PlaybackHeader { bool magic = 1; }`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "false",
+		},
+	})
 }
 
+// Test encoding of the string type.
 func TestString(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { string magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -421,6 +492,7 @@ func TestString(t *testing.T) {
 	})
 }
 
+// Test encoding of the bytes type.
 func TestBytes(t *testing.T) {
 	runTest(`syntax = "proto3"; message PlaybackHeader { bytes magic = 1; }`, "PlaybackHeader", []testField{
 		testField{
@@ -433,6 +505,7 @@ func TestBytes(t *testing.T) {
 	})
 }
 
+// Test behavior of multiple field encoding.
 func TestMultipleFields(t *testing.T) {
 	runTest(`
 syntax = "proto3";
@@ -440,6 +513,39 @@ message PlaybackHeader {
 	uint32 magic = 1;
 	float testfloat = 2;
 	double testdouble = 3;
+}
+`, "PlaybackHeader", []testField{
+		testField{
+			name:            "magic",
+			goName:          "Magic",
+			printfSpecifier: "%d",
+			value:           "1010",
+		},
+		testField{
+			name:            "testfloat",
+			goName:          "Testfloat",
+			printfSpecifier: "%f",
+			value:           "1.234",
+			isFloat:         true,
+		},
+		testField{
+			name:            "testdouble",
+			goName:          "Testdouble",
+			printfSpecifier: "%f",
+			value:           "5.678",
+			isFloat:         true,
+		},
+	})
+}
+
+// Test behavior of multiple field encoding, with a gap in the field numbers.
+func TestMultipleFieldsWithNumberGap(t *testing.T) {
+	runTest(`
+syntax = "proto3";
+message PlaybackHeader {
+	uint32 magic = 1;
+	float testfloat = 4;
+	double testdouble = 5;
 }
 `, "PlaybackHeader", []testField{
 		testField{
