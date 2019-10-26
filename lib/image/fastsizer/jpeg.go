@@ -99,16 +99,6 @@ var errNotExif = errors.New("not exif")
 
 // Adapted from https://github.com/disintegration/imageorient/
 func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
-	// EXIF marker
-	const (
-		markerSOI      = 0xffd8
-		markerAPP1     = 0xffe1
-		exifHeader     = 0x45786966
-		byteOrderBE    = 0x4d4d
-		byteOrderLE    = 0x4949
-		orientationTag = 0x0112
-	)
-
 	// XXX This is a lazy way to avoid rewriting the logic
 	buf := make([]byte, n)
 	if _, err := f.reader.ReadFull(buf); err != nil {
@@ -121,6 +111,7 @@ func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
 	if err := binary.Read(r, binary.BigEndian, &header); err != nil {
 		return err
 	}
+	const exifHeader = 0x45786966
 	if header != exifHeader {
 		return errNotExif
 	}
@@ -136,6 +127,12 @@ func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
 	if err := binary.Read(r, binary.BigEndian, &byteOrderTag); err != nil {
 		return err
 	}
+
+	const (
+		byteOrderBE = 0x4d4d
+		byteOrderLE = 0x4949
+	)
+
 	switch byteOrderTag {
 	case byteOrderBE:
 		byteOrder = binary.BigEndian
@@ -165,6 +162,10 @@ func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
 	if err := binary.Read(r, byteOrder, &numTags); err != nil {
 		return err
 	}
+
+	const (
+		orientationTag = 0x0112
+	)
 
 	// Find the orientation tag.
 	for i := 0; i < int(numTags); i++ {
