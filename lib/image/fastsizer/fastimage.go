@@ -5,11 +5,25 @@ import (
 	"io"
 )
 
+type ExifData struct {
+	ImageDescription string
+	Make             string
+	Model            string
+	Orientation      ExifOrientation
+	// XRes
+	// YRes
+	// ResUnit
+	Software     string
+	DateTime     string
+	Artist       string
+	HostComputer string
+	Copyright    string
+}
+
 type ImageInfo struct {
 	Size     ImageSize
 	Type     ImageType
-	Rotation int
-	Mirror   MirrorDirection
+	ExifData ExifData
 }
 
 // FastImage instance needs to be initialized before use

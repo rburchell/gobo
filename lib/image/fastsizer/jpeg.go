@@ -7,12 +7,34 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 )
 
 func (f *decoder) getJPEGInfo(info *ImageInfo) error {
 	offset := 2
 	var err error
 	tmp := make([]byte, 2)
+	const (
+		sof0Marker = 0xc0 // Start Of Frame (Baseline).
+		sof1Marker = 0xc1 // Start Of Frame (Extended Sequential).
+		sof2Marker = 0xc2 // Start Of Frame (Progressive).
+		dhtMarker  = 0xc4 // Define Huffman Table.
+		rst0Marker = 0xd0 // ReSTart (0).
+		rst7Marker = 0xd7 // ReSTart (7).
+		soiMarker  = 0xd8 // Start Of Image.
+		eoiMarker  = 0xd9 // End Of Image.
+		sosMarker  = 0xda // Start Of Scan.
+		dqtMarker  = 0xdb // Define Quantization Table.
+		driMarker  = 0xdd // Define Restart Interval.
+		comMarker  = 0xfe // COMment.
+		// "APPlication specific" markers aren't part of the JPEG spec per se,
+		// but in practice, their use is described at
+		// http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
+		app0Marker  = 0xe0
+		app1Marker  = 0xe1
+		app14Marker = 0xee
+		app15Marker = 0xef
+	)
 	for {
 		tmp, err = f.reader.Slice(offset, 2)
 		if err != nil {
@@ -95,13 +117,275 @@ func (f *decoder) getJPEGInfo(info *ImageInfo) error {
 	return fmt.Errorf("fail get size")
 }
 
+type ifdType int
+
+const (
+	primaryIfd ifdType = iota
+	exifIfd
+	gpsIfd
+)
+
+type tagToField struct {
+	id    uint16
+	name  string
+	field interface{}
+}
+
+const exifDebug = false
+
+func (f *decoder) readIfd(ifdType ifdType, r io.Reader, byteOrder binary.ByteOrder, exif *ExifData, offs int) error {
+	primaryTags := []tagToField{
+		tagToField{
+			id:    0x010e,
+			name:  "ImageDescription",
+			field: &exif.ImageDescription,
+		},
+		tagToField{
+			id:    0x010f,
+			name:  "Make",
+			field: &exif.Make,
+		},
+		tagToField{
+			id:    0x0110,
+			name:  "Model",
+			field: &exif.Model,
+		},
+		tagToField{
+			id:    0x0112,
+			name:  "Orientation",
+			field: &exif.Orientation,
+		},
+		tagToField{
+			id:    0x011A,
+			name:  "XResolution",
+			field: nil,
+		},
+		tagToField{
+			id:    0x011B,
+			name:  "YResolution",
+			field: nil,
+		},
+		tagToField{
+			id:    0x0128,
+			name:  "ResolutionUnit",
+			field: nil,
+		},
+		tagToField{
+			id:    0x0131,
+			name:  "Software",
+			field: &exif.Software,
+		},
+		tagToField{
+			id:    0x0132,
+			name:  "DateTime",
+			field: &exif.DateTime,
+		},
+		tagToField{
+			id:    0x013B,
+			name:  "Artist",
+			field: &exif.Artist,
+		},
+		tagToField{
+			id:    0x013C,
+			name:  "HostComputer",
+			field: &exif.HostComputer,
+		},
+		tagToField{
+			id:    0x1001,
+			name:  "RelatedImageWidth",
+			field: nil,
+		},
+		tagToField{
+			id:    0x1002,
+			name:  "RelatedImageHeight",
+			field: nil,
+		},
+		tagToField{
+			id:    0x0211,
+			name:  "YCbCrCoefficients",
+			field: nil,
+		},
+		tagToField{
+			id:    0x0213,
+			name:  "YCbCrPositioning",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA401,
+			name:  "CustomRendered",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA402,
+			name:  "ExposureMode",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA403,
+			name:  "WhiteBalance",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA404,
+			name:  "DigitalZoomRatio",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA405,
+			name:  "FocalLengthIn35mmFilm",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA406,
+			name:  "SceneCaptureType",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA407,
+			name:  "GainControl",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA408,
+			name:  "Contrast",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA409,
+			name:  "Saturation",
+			field: nil,
+		},
+		tagToField{
+			id:    0xA40A,
+			name:  "Sharpness",
+			field: nil,
+		},
+		tagToField{
+			id:    0xC4A5,
+			name:  "PrintImageMatching",
+			field: nil,
+		},
+		tagToField{
+			id:    0x8298,
+			name:  "Copyright",
+			field: &exif.Copyright,
+		},
+		tagToField{
+			id:    0x8769,
+			name:  "ExifOffset",
+			field: nil,
+		},
+	}
+
+	exifTags := []tagToField{}
+
+	// Read the number of tags.
+	var numTags uint16
+	if err := binary.Read(r, byteOrder, &numTags); err != nil {
+		return err
+	}
+
+	// Parse the tags.
+	str := ""
+	for i := 0; i < int(numTags); i++ {
+		var tag uint16
+		if err := binary.Read(r, byteOrder, &tag); err != nil {
+			return err
+		}
+		var fieldType uint16
+		if err := binary.Read(r, byteOrder, &fieldType); err != nil {
+			return err
+		}
+		var componentCount uint32
+		if err := binary.Read(r, byteOrder, &componentCount); err != nil {
+			return err
+		}
+		var data uint32
+		if err := binary.Read(r, byteOrder, &data); err != nil {
+			return err
+		}
+
+		tagList := primaryTags
+		switch ifdType {
+		case primaryIfd:
+			tagList = primaryTags
+		case exifIfd:
+			tagList = exifTags
+		default:
+			log.Printf("Unknown ifd type %d", ifdType)
+		}
+
+		found := false
+		for _, field := range tagList {
+			if field.id == tag {
+				switch tf := field.field.(type) {
+				case *string:
+					err := f.readStringTag(&str, offs, componentCount, data)
+					if err != nil {
+						return err
+					}
+					*tf = str
+					if exifDebug {
+						log.Printf("Parsed string field %x (%s) as %v", field.id, field.name, field.field)
+					}
+				case *ExifOrientation:
+					if data < 0 || data > 8 {
+						return fmt.Errorf("invalid orientation tag (%d)", data)
+					}
+
+					*tf = ExifOrientation(data)
+					if exifDebug {
+						log.Printf("Parsed orientation field %x (%s) as %v", field.id, field.name, field.field)
+					}
+				case nil:
+					if ifdType == primaryIfd && field.id == 0x8769 {
+						/*
+							log.Printf("Offset to another ifd")
+							err := f.readIfd(exifIfd, r, byteOrder, exif, offs)
+							if err != nil {
+								return err
+							}
+							continue
+						*/
+					}
+					if exifDebug {
+						log.Printf("Ignored field %s (%d %d)", field.name, componentCount, data)
+					}
+				default:
+					log.Printf("unknown exif field type %T", field.field)
+				}
+				found = true
+				break
+			}
+		}
+
+		if found == false {
+			log.Printf("Unknown EXIF tag: %x %d %d %d", tag, fieldType, componentCount, data)
+		}
+	}
+
+	return nil
+}
+
+func (f *decoder) readStringTag(place *string, offs int, componentCount, data uint32) error {
+	tagDataOffset := offs      /* section offset */
+	tagDataOffset += int(data) /* tag data offset */
+	tagDataOffset += 6         /* not sure why, but this seems to be necessary... */
+	tmp, err := f.reader.Slice(tagDataOffset, int(componentCount))
+	if err != nil {
+		return err
+	}
+
+	*place = string(tmp)
+	return nil
+}
+
 var errNotExif = errors.New("not exif")
 
 // Adapted from https://github.com/disintegration/imageorient/
 func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
-	// XXX This is a lazy way to avoid rewriting the logic
-	buf := make([]byte, n)
-	if _, err := f.reader.ReadFull(buf); err != nil {
+	buf, err := f.reader.Slice(offs, n)
+	if err != nil {
 		return err
 	}
 	r := bytes.NewBuffer(buf)
@@ -157,82 +441,7 @@ func (f *decoder) readExif(info *ImageInfo, offs, n int) error {
 		return err
 	}
 
-	// Read the number of tags.
-	var numTags uint16
-	if err := binary.Read(r, byteOrder, &numTags); err != nil {
-		return err
-	}
+	err = f.readIfd(primaryIfd, r, byteOrder, &info.ExifData, offs)
 
-	const (
-		orientationTag = 0x0112
-	)
-
-	// Find the orientation tag.
-	for i := 0; i < int(numTags); i++ {
-		var tag uint16
-		if err := binary.Read(r, byteOrder, &tag); err != nil {
-			return err
-		}
-		if tag != orientationTag {
-			if _, err := io.CopyN(ioutil.Discard, r, 10); err != nil {
-				return err
-			}
-			continue
-		}
-		if _, err := io.CopyN(ioutil.Discard, r, 6); err != nil {
-			return err
-		}
-		var val uint16
-		if err := binary.Read(r, byteOrder, &val); err != nil {
-			return err
-		}
-		if val < 0 || val > 8 {
-			return fmt.Errorf("invalid orientation tag (%d)", val)
-		}
-
-		switch val {
-		case 2:
-			info.Mirror = MirrorHorizontal
-		case 3:
-			info.Rotation = 180
-		case 4:
-			info.Mirror = MirrorVertical
-		case 5:
-			info.Mirror = MirrorHorizontal
-			fallthrough
-		case 8:
-			info.Rotation = 270
-		case 7:
-			info.Mirror = MirrorHorizontal
-			fallthrough
-		case 6:
-			info.Rotation = 90
-		}
-
-		return nil
-	}
-
-	return nil
+	return err
 }
-
-const (
-	sof0Marker = 0xc0 // Start Of Frame (Baseline).
-	sof1Marker = 0xc1 // Start Of Frame (Extended Sequential).
-	sof2Marker = 0xc2 // Start Of Frame (Progressive).
-	dhtMarker  = 0xc4 // Define Huffman Table.
-	rst0Marker = 0xd0 // ReSTart (0).
-	rst7Marker = 0xd7 // ReSTart (7).
-	soiMarker  = 0xd8 // Start Of Image.
-	eoiMarker  = 0xd9 // End Of Image.
-	sosMarker  = 0xda // Start Of Scan.
-	dqtMarker  = 0xdb // Define Quantization Table.
-	driMarker  = 0xdd // Define Restart Interval.
-	comMarker  = 0xfe // COMment.
-	// "APPlication specific" markers aren't part of the JPEG spec per se,
-	// but in practice, their use is described at
-	// http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
-	app0Marker  = 0xe0
-	app1Marker  = 0xe1
-	app14Marker = 0xee
-	app15Marker = 0xef
-)
