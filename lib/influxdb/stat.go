@@ -61,6 +61,15 @@ func NewStat(table string, tableSuffix string) *Stat {
 	return &p
 }
 
+func NewStatWithTagsAndValues(table string, tableSuffix string, tags, values map[string]string) *Stat {
+	p := Stat{}
+	p.table = table
+	p.tableSuffix = tableSuffix
+	p.tags = tags
+	p.values = values
+	return &p
+}
+
 // Set the key representing multiple entries for the same table. For instance,
 // if you are measuring per-core CPU use, you likely have multiple entries with
 // the same table name.

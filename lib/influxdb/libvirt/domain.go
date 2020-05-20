@@ -1,4 +1,4 @@
-package main
+package libvirt
 
 import (
 	"bytes"
@@ -19,21 +19,23 @@ func checkErr(err error, msg string) {
 }
 
 // representing all the stats for a given domain (VM).
-type domain struct {
-	stats  []*influxdb.Stat
-	domain string
+type Domain struct {
+	Stats []*influxdb.Stat
+
+	// The libvirt domain name
+	Domain string
 }
 
-func (this *domain) newStat(table string) *influxdb.Stat {
+func (this *Domain) newStat(table string) *influxdb.Stat {
 	p := influxdb.NewStat(table, "_libvirt")
-	p.AppendTag("domain", this.domain)
-	this.stats = append(this.stats, p)
+	p.AppendTag("domain", this.Domain)
+	this.Stats = append(this.Stats, p)
 	return p
 }
 
-func getDomainStats(buf []byte) map[string]*domain {
-	m := make(map[string]*domain)
-	d := &domain{}
+func ParseIntoStats(buf []byte) map[string]*Domain {
+	m := make(map[string]*Domain)
+	d := &Domain{}
 
 	var p *influxdb.Stat
 
@@ -41,12 +43,12 @@ func getDomainStats(buf []byte) map[string]*domain {
 	for _, line := range lines {
 		dparts := domRegex.FindStringSubmatch(string(line))
 		if len(dparts) > 0 {
-			if len(d.domain) > 0 {
-				d = &domain{}
+			if len(d.Domain) > 0 {
+				d = &Domain{}
 				p = nil
 			}
-			d.domain = dparts[1]
-			m[d.domain] = d
+			d.Domain = dparts[1]
+			m[d.Domain] = d
 			continue
 		}
 
